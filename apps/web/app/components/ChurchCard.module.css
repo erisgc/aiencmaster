@@ -1,0 +1,173 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-1);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.cardActive:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-strong);
+}
+
+.cardInactive {
+  opacity: 0.92;
+}
+
+.media {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+}
+
+.image {
+  object-fit: cover;
+  transform: scale(1.01);
+  transition: transform 260ms ease;
+}
+
+.cardActive:hover .image {
+  transform: scale(1.05);
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(31, 79, 163, 0.18), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(182, 123, 47, 0.14), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(232, 239, 250, 0.96));
+}
+
+:root[data-theme="dark"] .placeholder {
+  background:
+    radial-gradient(circle at top left, rgba(140, 176, 255, 0.18), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(217, 163, 94, 0.14), transparent 28%),
+    linear-gradient(135deg, rgba(19, 29, 46, 0.92), rgba(14, 22, 35, 0.96));
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.38));
+}
+
+.mediaTop {
+  position: absolute;
+  inset: 1rem 1rem auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.statusBadge,
+.cityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.statusActive {
+  color: #ffffff;
+  background: rgba(31, 79, 163, 0.65);
+}
+
+.statusInactive {
+  color: #ffffff;
+  background: rgba(112, 27, 27, 0.58);
+}
+
+.cityBadge {
+  color: #ffffff;
+  background: rgba(15, 23, 38, 0.36);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.name {
+  font-size: 1.3rem;
+  line-height: 1.12;
+}
+
+.address {
+  color: var(--text-muted);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.meta {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.cta,
+.disabledCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cta {
+  background: rgba(31, 79, 163, 0.08);
+  color: var(--color-primary);
+}
+
+.disabledCta {
+  background: rgba(24, 50, 95, 0.08);
+  color: var(--text-soft);
+}
+
+@media (max-width: 720px) {
+  .media {
+    height: 220px;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

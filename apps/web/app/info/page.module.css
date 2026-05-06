@@ -1,0 +1,374 @@
+.container {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 3rem;
+}
+
+/* ─── Hero header ─── */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: clamp(1.35rem, 3vw, 2rem);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-hero);
+  box-shadow: var(--shadow-2);
+}
+
+.title {
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.subtitle {
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+/* ─── Cards ─── */
+
+.card,
+.smallCard {
+  border-radius: 26px;
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-1);
+}
+
+.card {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.sectionLabel {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+  margin-bottom: 0.85rem;
+}
+
+.cardTitle {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  line-height: 1.3;
+}
+
+.smallTitle {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.text {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ─── Prose (historia) ─── */
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.prose p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin: 0;
+}
+
+.prose strong {
+  color: var(--text-primary, inherit);
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+/* ─── Timeline highlights ─── */
+
+.highlight {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.1rem 1.25rem;
+  border-radius: 18px;
+  border-left: 4px solid var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 5%, transparent);
+}
+
+.highlightYear {
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent, #2563eb);
+  min-width: 3.5rem;
+  padding-top: 0.1rem;
+}
+
+.highlight p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+/* ─── Numbered list (objetivos, credo) ─── */
+
+.numberedList {
+  list-style: none;
+  counter-reset: item;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.numberedList li {
+  counter-increment: item;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--surface, #fff) 60%, transparent);
+  color: var(--text-muted);
+  line-height: 1.65;
+  position: relative;
+  padding-left: 3.5rem;
+}
+
+.numberedList li::before {
+  content: counter(item);
+  position: absolute;
+  left: 1.1rem;
+  top: 1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  flex-shrink: 0;
+}
+
+.numberedList li strong {
+  color: var(--text-primary, inherit);
+  font-weight: 600;
+}
+
+.verse {
+  display: block;
+  font-size: 0.78rem;
+  font-style: normal;
+  color: var(--accent, #2563eb);
+  opacity: 0.8;
+  margin-top: 0.15rem;
+}
+
+/* ─── Credo / Doctrina ─── */
+
+.credoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.credoHeader {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: 26px;
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-1);
+  text-align: center;
+}
+
+.credoTitle {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+  line-height: 1.3;
+}
+
+.credoSubtitle {
+  max-width: 55ch;
+  margin: 0 auto;
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.credoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.credoCard {
+  border-radius: 22px;
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-1);
+  padding: 1.5rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.credoCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-2);
+}
+
+.credoCardWide {
+  grid-column: 1 / -1;
+  text-align: center;
+  align-items: center;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent, #2563eb) 6%, transparent),
+      color-mix(in srgb, var(--accent, #2563eb) 2%, transparent)
+    );
+  border-color: color-mix(in srgb, var(--accent, #2563eb) 20%, transparent);
+}
+
+.credoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  font-size: 1.25rem;
+  background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  color: var(--accent, #2563eb);
+  flex-shrink: 0;
+}
+
+.credoCardWide .credoIcon {
+  margin: 0 auto;
+}
+
+.credoCardTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.credoText {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.credoVerse {
+  display: block;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 500;
+  color: var(--accent, #2563eb);
+  opacity: 0.75;
+  margin-top: auto;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
+}
+
+/* ─── Grid (contacto / datos) ─── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.smallCard {
+  padding: 1.2rem;
+}
+
+.contactList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.contactLabel {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .credoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .credoCardWide {
+    grid-column: 1 / -1;
+  }
+
+  .highlight {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .highlightYear {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 580px) {
+  .credoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .credoCardWide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .container {
+    width: min(100%, calc(100% - 1rem));
+  }
+
+  .numberedList li {
+    padding-left: 3rem;
+  }
+
+  .numberedList li::before {
+    left: 0.85rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.72rem;
+  }
+}

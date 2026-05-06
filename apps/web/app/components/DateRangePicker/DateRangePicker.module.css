@@ -1,0 +1,36 @@
+.wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+
+/* ===== react-day-picker (global) ===== */
+:global(.rdp) {
+  /* acento institucional */
+  --rdp-accent-color: var(--accent);
+
+  /* superficie del calendario */
+  --rdp-background-color: var(--surface-2);
+
+  /* texto */
+  color: var(--text);
+}
+
+/* día seleccionado */
+:global(.rdp-day_selected) {
+  background-color: var(--rdp-accent-color);
+  color: #fff;
+}
+
+/* ===== Ajustes finos para DARK ===== */
+:root[data-theme="dark"] .wrapper {
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] :global(.rdp) {
+  --rdp-background-color: var(--surface-2);
+  color: var(--text);
+}

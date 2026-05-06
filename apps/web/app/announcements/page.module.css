@@ -1,0 +1,77 @@
+.page {
+  width: min(1240px, calc(100% - 2rem));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+  gap: 1rem;
+  padding: clamp(1.35rem, 3vw, 2rem);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-soft);
+  background: var(--gradient-hero);
+  box-shadow: var(--shadow-2);
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.eyebrow,
+.heroCardLabel {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.title {
+  max-width: 12ch;
+}
+
+.subtitle {
+  max-width: 60ch;
+}
+
+.heroCard {
+  padding: 1.35rem;
+  border-radius: 24px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--shadow-1);
+}
+
+:root[data-theme="dark"] .heroCard {
+  background: rgba(17, 27, 43, 0.78);
+}
+
+.heroCardValue {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: clamp(1.85rem, 3vw, 2.6rem);
+  line-height: 1.1;
+  color: var(--text-main);
+}
+
+.heroCardText {
+  margin-top: 0.6rem;
+}
+
+@media (max-width: 920px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    width: min(100%, calc(100% - 1rem));
+  }
+}

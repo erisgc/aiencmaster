@@ -1,0 +1,455 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  max-width: 70ch;
+  line-height: 1.55;
+  margin-top: 0.35rem;
+}
+
+.backLink {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.newBtn {
+  background: linear-gradient(135deg, var(--gem-sapphire), var(--gem-emerald));
+  color: #fff;
+  text-decoration: none;
+  padding: 0.7rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.15s ease;
+}
+
+.newBtn:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Filtros ── */
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
+  gap: 0.75rem;
+  align-items: end;
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-1);
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filterGroup label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filterGroup select,
+.filterGroup input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.filterGroup select:focus,
+.filterGroup input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.clearBtn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+.clearBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Resultados ── */
+
+.errorBanner {
+  padding: 0.85rem 1.1rem;
+  border-radius: 14px;
+  background: var(--danger-weak);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  font-size: 0.85rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resultsHeader {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.item {
+  display: flex;
+  gap: 1.25rem;
+  align-items: stretch;
+  padding: 1.25rem 1.4rem;
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+.itemMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.itemTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.itemMeta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.itemMeta dt {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.itemMeta dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.itemActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+  min-width: 110px;
+}
+
+.editBtn {
+  background: var(--accent-weak);
+  color: var(--accent);
+  text-decoration: none;
+  text-align: center;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.editBtn:hover {
+  border-color: var(--accent);
+}
+
+.deleteBtn {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: var(--danger-weak);
+}
+
+/* ── Type badges ── */
+
+.typeBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+
+.type_OFFERINGS {
+  background: var(--accent-emerald-weak);
+  color: var(--accent-emerald);
+}
+.type_ATTENDANCE {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+.type_EXPENSES {
+  background: var(--danger-weak);
+  color: var(--danger);
+}
+.type_EVENT {
+  background: var(--accent-topaz-weak);
+  color: var(--accent-topaz);
+}
+.type_OTHER {
+  background: var(--chip);
+  color: var(--text-muted);
+}
+
+/* ── Form ── */
+
+.formCard {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.field input,
+.field select,
+.field textarea {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-family: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.field input:disabled,
+.field input[readonly] {
+  background: var(--chip);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.typeSection {
+  margin-top: 0.5rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--accent-weak);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.typeTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.formError {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  background: var(--danger-weak);
+  border-radius: 10px;
+  border: 1px solid var(--danger);
+}
+
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  padding: 0.7rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  border-color: var(--text-muted);
+}
+
+.submitBtn {
+  background: linear-gradient(135deg, var(--gem-sapphire), var(--gem-emerald));
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .item {
+    flex-direction: column;
+  }
+
+  .itemActions {
+    flex-direction: row;
+    min-width: 0;
+  }
+
+  .editBtn,
+  .deleteBtn {
+    flex: 1;
+  }
+}

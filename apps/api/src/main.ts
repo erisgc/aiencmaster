@@ -1,0 +1,63 @@
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import { Logger, ValidationPipe } from "@nestjs/common";
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from "@nestjs/platform-fastify";
+import cookie from "@fastify/cookie";
+import helmet from "@fastify/helmet";
+import multipart from "@fastify/multipart";
+
+async function bootstrap() {
+  const logger = new Logger("Bootstrap");
+
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter(),
+  );
+
+  // Security headers (CSP deshabilitado porque la API solo devuelve JSON).
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  });
+
+  await app.register(cookie);
+  await app.register(multipart, {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50 MB
+    },
+    attachFieldsToBody: false,
+  });
+
+  app.enableCors({
+    origin: process.env.WEB_ORIGIN ?? "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  const port = process.env.PORT ?? 3001;
+  await app.listen(port, "0.0.0.0");
+  logger.log(`API running on http://localhost:${port}`);
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    logger.log(`Received ${signal} — shutting down gracefully`);
+    await app.close();
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+}
+
+void bootstrap();

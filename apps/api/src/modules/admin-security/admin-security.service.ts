@@ -1,0 +1,657 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DataSource, Repository } from "typeorm";
+
+import { AdminAccount } from "./admin-account.entity";
+import { AdminAccessRequest } from "./admin-access-request.entity";
+import { AdminActionLog } from "./admin-action-log.entity";
+import { AdminAuditService } from "./admin-audit.service";
+import { AdminSessionService } from "./admin-session.service";
+import { AdminDevice } from "./admin_device.entity";
+import { CreateAdminAccountDto } from "./dto/create-admin-account.dto";
+import { QueryAuditLogDto } from "./dto/query-audit-log.dto";
+import { ResetAdminPasswordDto } from "./dto/reset-admin-password.dto";
+import { ResolveAccessRequestDto } from "./dto/resolve-access-request.dto";
+import { UpdateAdminAccountDto } from "./dto/update-admin-account.dto";
+import { AdminAccessRequestStatus } from "./enums/admin-access-request-status.enum";
+import { AdminDeviceScope } from "./enums/admin-device-scope.enum";
+import { AdminDeviceStatus } from "./enums/admin-device-status.enum";
+import { AdminRole } from "./enums/admin-role.enum";
+import { AuthenticatedAdminContext } from "./admin-security.types";
+
+@Injectable()
+export class AdminSecurityService {
+  constructor(
+    @InjectRepository(AdminAccount)
+    private readonly accountRepo: Repository<AdminAccount>,
+    @InjectRepository(AdminDevice)
+    private readonly deviceRepo: Repository<AdminDevice>,
+    @InjectRepository(AdminAccessRequest)
+    private readonly accessRequestRepo: Repository<AdminAccessRequest>,
+    @InjectRepository(AdminActionLog)
+    private readonly auditRepo: Repository<AdminActionLog>,
+    private readonly dataSource: DataSource,
+    private readonly sessionService: AdminSessionService,
+    private readonly auditService: AdminAuditService,
+  ) {}
+
+  private serializeAccount(account: AdminAccount) {
+    return {
+      id: account.id,
+      username: account.username,
+      displayName: account.displayName,
+      role: account.role,
+      isActive: account.isActive,
+      assignedChurchId: account.assignedChurchId ?? null,
+      assignedChurchName: account.assignedChurch?.name ?? null,
+      lastLoginAt: account.lastLoginAt?.toISOString() ?? null,
+      createdAt: account.createdAt.toISOString(),
+      updatedAt: account.updatedAt.toISOString(),
+      devices:
+        account.devices?.map((device) => ({
+          id: device.id,
+          deviceId: device.deviceId,
+          deviceName: device.deviceName,
+          status: device.status,
+          roleScope: device.roleScope,
+          lastSeenAt: device.lastSeenAt?.toISOString() ?? null,
+        })) ?? [],
+    };
+  }
+
+  private serializeDevice(device: AdminDevice) {
+    return {
+      id: device.id,
+      deviceId: device.deviceId,
+      deviceName: device.deviceName,
+      platform: device.platform,
+      browser: device.browser,
+      userAgent: device.userAgent,
+      ipLastSeen: device.ipLastSeen,
+      roleScope: device.roleScope,
+      status: device.status,
+      approvedAt: device.approvedAt?.toISOString() ?? null,
+      revokedAt: device.revokedAt?.toISOString() ?? null,
+      lastSeenAt: device.lastSeenAt?.toISOString() ?? null,
+      createdAt: device.createdAt.toISOString(),
+      updatedAt: device.updatedAt.toISOString(),
+      adminAccount: device.adminAccount
+        ? {
+            id: device.adminAccount.id,
+            username: device.adminAccount.username,
+            displayName: device.adminAccount.displayName,
+            role: device.adminAccount.role,
+          }
+        : null,
+    };
+  }
+
+  private serializeAccessRequest(request: AdminAccessRequest) {
+    return {
+      id: request.id,
+      requestedUsername: request.requestedUsername,
+      deviceId: request.deviceId,
+      deviceName: request.deviceName,
+      platform: request.platform,
+      browser: request.browser,
+      userAgent: request.userAgent,
+      ip: request.ip,
+      status: request.status,
+      requestedAt: request.requestedAt.toISOString(),
+      resolvedAt: request.resolvedAt?.toISOString() ?? null,
+      notes: request.notes,
+      adminAccount: request.adminAccount
+        ? {
+            id: request.adminAccount.id,
+            username: request.adminAccount.username,
+            displayName: request.adminAccount.displayName,
+            role: request.adminAccount.role,
+          }
+        : null,
+    };
+  }
+
+  private async expirePendingAccessRequests() {
+    const cutoff = new Date(
+      Date.now() - this.sessionService.accessRequestTtlSeconds * 1000,
+    );
+
+    await this.accessRequestRepo
+      .createQueryBuilder()
+      .update(AdminAccessRequest)
+      .set({
+        status: AdminAccessRequestStatus.EXPIRED,
+        resolvedAt: new Date(),
+        notes: "Expired automatically",
+      })
+      .where("status = :status", {
+        status: AdminAccessRequestStatus.PENDING,
+      })
+      .andWhere('"requestedAt" < :cutoff', { cutoff })
+      .execute();
+  }
+
+  private async ensurePendingRequestCanBeResolved(
+    request: AdminAccessRequest,
+    requestRepo: Repository<AdminAccessRequest>,
+  ) {
+    if (request.status !== AdminAccessRequestStatus.PENDING) {
+      throw new BadRequestException(
+        "Only pending access requests can be processed",
+      );
+    }
+
+    if (this.sessionService.isPendingRequestExpired(request)) {
+      request.status = AdminAccessRequestStatus.EXPIRED;
+      request.resolvedAt = new Date();
+      request.notes = request.notes ?? "Expired automatically";
+      await requestRepo.save(request);
+      throw new BadRequestException("The access request has already expired");
+    }
+  }
+
+  async getSummary() {
+    await this.expirePendingAccessRequests();
+
+    const [adminAccounts, approvedDevices, pendingRequests, revokedDevices] =
+      await Promise.all([
+        this.accountRepo.count(),
+        this.deviceRepo.count({
+          where: { status: AdminDeviceStatus.APPROVED },
+        }),
+        this.accessRequestRepo.count({
+          where: { status: AdminAccessRequestStatus.PENDING },
+        }),
+        this.deviceRepo.find({
+          where: { status: AdminDeviceStatus.REVOKED },
+          order: { revokedAt: "DESC" },
+          take: 5,
+        }),
+      ]);
+
+    return {
+      adminAccounts,
+      approvedDevices,
+      pendingRequests,
+      recentRevokedDevices: revokedDevices.map((device) => ({
+        id: device.id,
+        deviceName: device.deviceName,
+        revokedAt: device.revokedAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
+  async getPendingAccessRequests() {
+    await this.expirePendingAccessRequests();
+
+    return this.accessRequestRepo
+      .find({
+        where: { status: AdminAccessRequestStatus.PENDING },
+        relations: { adminAccount: true },
+        order: { requestedAt: "DESC" },
+      })
+      .then((requests) =>
+        requests.map((request) => this.serializeAccessRequest(request)),
+      );
+  }
+
+  async approveAccessRequest(
+    requestId: string,
+    dto: ResolveAccessRequestDto,
+    actor: AuthenticatedAdminContext,
+  ) {
+    return this.dataSource.transaction("SERIALIZABLE", async (manager) => {
+      const requestRepo = manager.getRepository(AdminAccessRequest);
+      const deviceRepo = manager.getRepository(AdminDevice);
+      const auditRepo = manager.getRepository(AdminActionLog);
+
+      const request = await requestRepo.findOne({
+        where: { id: requestId },
+        relations: { adminAccount: true },
+      });
+
+      if (!request) {
+        throw new NotFoundException("Access request not found");
+      }
+
+      if (!request.adminAccountId || !request.adminAccount) {
+        throw new BadRequestException(
+          "Access request is not linked to an account",
+        );
+      }
+
+      await this.ensurePendingRequestCanBeResolved(request, requestRepo);
+
+      const existingDevice = await deviceRepo.findOne({
+        where: { deviceId: request.deviceId },
+      });
+
+      if (
+        existingDevice?.adminAccountId &&
+        existingDevice.adminAccountId !== request.adminAccountId
+      ) {
+        throw new ConflictException(
+          "This device is already bound to a different admin account.",
+        );
+      }
+
+      const device =
+        existingDevice ??
+        deviceRepo.create({
+          deviceId: request.deviceId,
+        });
+
+      request.status = AdminAccessRequestStatus.APPROVED;
+      request.resolvedAt = new Date();
+      request.resolvedByDeviceId = actor.device.id;
+      request.notes = dto.notes?.trim() ?? null;
+      await requestRepo.save(request);
+
+      device.adminAccountId = request.adminAccountId;
+      device.deviceName = request.deviceName;
+      device.platform = request.platform;
+      device.browser = request.browser;
+      device.userAgent = request.userAgent;
+      device.ipLastSeen = request.ip;
+      device.status = AdminDeviceStatus.APPROVED;
+      device.roleScope = AdminDeviceScope.APPROVED_DEVICE;
+      device.approvedAt = new Date();
+      device.revokedAt = null;
+      device.trustedTokenHash = null;
+      device.approvedByDeviceId = actor.device.id;
+      await deviceRepo.save(device);
+
+      await this.auditService.log(
+        {
+          actorAdminAccountId: actor.account.id,
+          actorDeviceId: actor.device.id,
+          actionType: "ACCESS_REQUEST_APPROVED",
+          targetType: "ADMIN_ACCESS_REQUEST",
+          targetId: request.id,
+          description: `Solicitud aprobada para ${request.deviceName}`,
+          metadata: {
+            deviceId: request.deviceId,
+            adminAccountId: request.adminAccountId,
+          },
+        },
+        auditRepo,
+      );
+
+      return {
+        request: this.serializeAccessRequest(request),
+        device: this.serializeDevice(device),
+      };
+    });
+  }
+
+  async rejectAccessRequest(
+    requestId: string,
+    dto: ResolveAccessRequestDto,
+    actor: AuthenticatedAdminContext,
+  ) {
+    return this.dataSource.transaction("SERIALIZABLE", async (manager) => {
+      const requestRepo = manager.getRepository(AdminAccessRequest);
+      const deviceRepo = manager.getRepository(AdminDevice);
+      const auditRepo = manager.getRepository(AdminActionLog);
+
+      const request = await requestRepo.findOne({
+        where: { id: requestId },
+        relations: { adminAccount: true },
+      });
+
+      if (!request) {
+        throw new NotFoundException("Access request not found");
+      }
+
+      if (!request.adminAccountId || !request.adminAccount) {
+        throw new BadRequestException(
+          "Access request is not linked to an account",
+        );
+      }
+
+      await this.ensurePendingRequestCanBeResolved(request, requestRepo);
+
+      const existingDevice = await deviceRepo.findOne({
+        where: { deviceId: request.deviceId },
+      });
+
+      if (
+        existingDevice?.adminAccountId &&
+        existingDevice.adminAccountId !== request.adminAccountId
+      ) {
+        throw new ConflictException(
+          "This device is already bound to a different admin account.",
+        );
+      }
+
+      const device =
+        existingDevice ??
+        deviceRepo.create({
+          deviceId: request.deviceId,
+        });
+
+      request.status = AdminAccessRequestStatus.REJECTED;
+      request.resolvedAt = new Date();
+      request.resolvedByDeviceId = actor.device.id;
+      request.notes = dto.notes?.trim() ?? null;
+      await requestRepo.save(request);
+
+      device.adminAccountId = request.adminAccountId;
+      device.deviceName = request.deviceName;
+      device.platform = request.platform;
+      device.browser = request.browser;
+      device.userAgent = request.userAgent;
+      device.ipLastSeen = request.ip;
+      device.status = AdminDeviceStatus.REJECTED;
+      device.roleScope = AdminDeviceScope.APPROVED_DEVICE;
+      device.revokedAt = null;
+      device.approvedAt = null;
+      device.trustedTokenHash = null;
+      device.approvedByDeviceId = null;
+      await deviceRepo.save(device);
+
+      await this.auditService.log(
+        {
+          actorAdminAccountId: actor.account.id,
+          actorDeviceId: actor.device.id,
+          actionType: "ACCESS_REQUEST_REJECTED",
+          targetType: "ADMIN_ACCESS_REQUEST",
+          targetId: request.id,
+          description: `Solicitud rechazada para ${request.deviceName}`,
+          metadata: {
+            deviceId: request.deviceId,
+            adminAccountId: request.adminAccountId,
+          },
+        },
+        auditRepo,
+      );
+
+      return {
+        request: this.serializeAccessRequest(request),
+        device: this.serializeDevice(device),
+      };
+    });
+  }
+
+  getDevices() {
+    return this.deviceRepo
+      .find({
+        relations: { adminAccount: true },
+        order: { updatedAt: "DESC" },
+      })
+      .then((devices) => devices.map((device) => this.serializeDevice(device)));
+  }
+
+  async revokeDevice(deviceRecordId: string, actor: AuthenticatedAdminContext) {
+    const device = await this.deviceRepo.findOne({
+      where: { id: deviceRecordId },
+      relations: { adminAccount: true },
+    });
+
+    if (!device) {
+      throw new NotFoundException("Device not found");
+    }
+
+    if (device.roleScope === AdminDeviceScope.ROOT_DEVICE) {
+      throw new BadRequestException("The root device cannot be revoked");
+    }
+
+    if (device.status === AdminDeviceStatus.REVOKED) {
+      throw new BadRequestException("The device is already revoked");
+    }
+
+    device.status = AdminDeviceStatus.REVOKED;
+    device.revokedAt = new Date();
+    device.trustedTokenHash = null;
+    await this.deviceRepo.save(device);
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "DEVICE_REVOKED",
+      targetType: "ADMIN_DEVICE",
+      targetId: device.id,
+      description: `Dispositivo revocado: ${device.deviceName}`,
+      metadata: {
+        deviceId: device.deviceId,
+        adminAccountId: device.adminAccountId,
+      },
+    });
+
+    return this.serializeDevice(device);
+  }
+
+  getAccounts() {
+    return this.accountRepo
+      .find({
+        relations: { devices: true, assignedChurch: true },
+        order: { createdAt: "ASC" },
+      })
+      .then((accounts) =>
+        accounts.map((account) => this.serializeAccount(account)),
+      );
+  }
+
+  /**
+   * Devuelve todas las acciones registradas en `AdminActionLog` por el admin
+   * indicado. Útil para que el ROOT haga seguimiento de cada cuenta.
+   */
+  async getAccountHistory(accountId: string) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+      relations: { assignedChurch: true },
+    });
+    if (!account) {
+      throw new NotFoundException("Cuenta no encontrada");
+    }
+
+    const logs = await this.auditRepo.find({
+      where: { actorAdminAccountId: accountId },
+      order: { createdAt: "DESC" },
+      take: 200,
+    });
+
+    return {
+      account: this.serializeAccount(account),
+      actions: logs.map((log) => ({
+        id: log.id,
+        actionType: log.actionType,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        description: log.description,
+        ip: log.ip,
+        userAgent: log.userAgent,
+        metadata: log.metadata,
+        createdAt: log.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async createAdminAccount(
+    dto: CreateAdminAccountDto,
+    actor: AuthenticatedAdminContext,
+  ) {
+    if (dto.role !== AdminRole.ADMIN) {
+      throw new BadRequestException(
+        "Only ADMIN accounts can be created from the panel",
+      );
+    }
+
+    const existing = await this.accountRepo.findOne({
+      where: { username: dto.username.trim().toLowerCase() },
+    });
+
+    if (existing) {
+      throw new BadRequestException("Username already exists");
+    }
+
+    const account = await this.accountRepo.save(
+      this.accountRepo.create({
+        username: dto.username.trim().toLowerCase(),
+        passwordHash: await this.sessionService.hashPassword(dto.password),
+        displayName: dto.displayName.trim(),
+        role: AdminRole.ADMIN,
+        isActive: true,
+        tokenVersion: 1,
+        assignedChurchId: dto.assignedChurchId ?? null,
+      }),
+    );
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "ADMIN_ACCOUNT_CREATED",
+      targetType: "ADMIN_ACCOUNT",
+      targetId: account.id,
+      description: `Cuenta admin creada: ${account.username}`,
+    });
+
+    return this.serializeAccount(account);
+  }
+
+  async updateAdminAccount(
+    accountId: string,
+    dto: UpdateAdminAccountDto,
+    actor: AuthenticatedAdminContext,
+  ) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      throw new NotFoundException("Admin account not found");
+    }
+
+    const wasActive = account.isActive;
+
+    if (account.role === AdminRole.ROOT && dto.isActive === false) {
+      throw new BadRequestException("The root account cannot be deactivated");
+    }
+
+    if (dto.displayName !== undefined) {
+      account.displayName = dto.displayName.trim();
+    }
+
+    if (dto.isActive !== undefined) {
+      account.isActive = dto.isActive;
+    }
+
+    if (dto.assignedChurchId !== undefined && account.role !== AdminRole.ROOT) {
+      account.assignedChurchId = dto.assignedChurchId ?? null;
+    }
+
+    await this.accountRepo.save(account);
+
+    const actionType =
+      dto.isActive === false && wasActive
+        ? "ADMIN_ACCOUNT_DEACTIVATED"
+        : dto.isActive === true && !wasActive
+          ? "ADMIN_ACCOUNT_REACTIVATED"
+          : "ADMIN_ACCOUNT_UPDATED";
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType,
+      targetType: "ADMIN_ACCOUNT",
+      targetId: account.id,
+      description: `Cuenta admin actualizada: ${account.username}`,
+      metadata: {
+        isActive: account.isActive,
+        displayName: account.displayName,
+      },
+    });
+
+    return this.serializeAccount(account);
+  }
+
+  async resetAdminPassword(
+    accountId: string,
+    dto: ResetAdminPasswordDto,
+    actor: AuthenticatedAdminContext,
+  ) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      throw new NotFoundException("Admin account not found");
+    }
+
+    account.passwordHash = await this.sessionService.hashPassword(dto.password);
+    account.tokenVersion += 1;
+    await this.accountRepo.save(account);
+    await this.deviceRepo
+      .createQueryBuilder()
+      .update(AdminDevice)
+      .set({ trustedTokenHash: null })
+      .where("adminAccountId = :adminAccountId", { adminAccountId: account.id })
+      .execute();
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "ADMIN_PASSWORD_RESET",
+      targetType: "ADMIN_ACCOUNT",
+      targetId: account.id,
+      description: `Contraseña reseteada para ${account.username}`,
+    });
+
+    return { success: true };
+  }
+
+  async getAuditLogs(query: QueryAuditLogDto) {
+    const qb = this.auditRepo
+      .createQueryBuilder("log")
+      .leftJoinAndSelect("log.actorAdminAccount", "actorAdminAccount")
+      .leftJoinAndSelect("log.actorDevice", "actorDevice")
+      .orderBy("log.createdAt", "DESC")
+      .take(200);
+
+    if (query.actionType) {
+      qb.andWhere("log.actionType = :actionType", {
+        actionType: query.actionType,
+      });
+    }
+
+    if (query.actorAdminAccountId) {
+      qb.andWhere("log.actorAdminAccountId = :actorAdminAccountId", {
+        actorAdminAccountId: query.actorAdminAccountId,
+      });
+    }
+
+    return qb.getMany().then((logs) =>
+      logs.map((log) => ({
+        id: log.id,
+        actionType: log.actionType,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        description: log.description,
+        ip: log.ip,
+        userAgent: log.userAgent,
+        metadata: log.metadata,
+        createdAt: log.createdAt.toISOString(),
+        actorAdminAccount: log.actorAdminAccount
+          ? {
+              id: log.actorAdminAccount.id,
+              username: log.actorAdminAccount.username,
+              displayName: log.actorAdminAccount.displayName,
+              role: log.actorAdminAccount.role,
+            }
+          : null,
+        actorDevice: log.actorDevice
+          ? {
+              id: log.actorDevice.id,
+              deviceName: log.actorDevice.deviceName,
+              deviceId: log.actorDevice.deviceId,
+            }
+          : null,
+      })),
+    );
+  }
+}

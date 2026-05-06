@@ -1,0 +1,43 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity var(--fade, 1s) ease-in-out;
+  will-change: opacity;
+}
+
+.layer.active {
+  opacity: 1;
+}
+
+/* Velo encima de la imagen para que el contenido siga siendo legible.
+   Combinamos un overlay de la paleta con un fade hacia el bg principal. */
+.tint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(15, 76, 129, 0.18), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(15, 123, 108, 0.16), transparent 30%),
+    radial-gradient(circle at 50% 110%, rgba(212, 164, 55, 0.12), transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 76%, transparent), color-mix(in srgb, var(--bg-main) 92%, transparent) 70%);
+  backdrop-filter: blur(2px);
+}
+
+:root[data-theme="dark"] .tint {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(111, 168, 220, 0.20), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(60, 179, 154, 0.18), transparent 30%),
+    radial-gradient(circle at 50% 110%, rgba(232, 196, 107, 0.14), transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 78%, transparent), color-mix(in srgb, var(--bg-main) 94%, transparent) 70%);
+}

@@ -1,0 +1,113 @@
+.shell {
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+}
+
+.card {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.subtitle {
+  margin: 0.55rem 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.form {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hint {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.field input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  color: var(--text);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.actions {
+  margin-top: 0.35rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  appearance: none;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.primaryBtn {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), rgba(37, 99, 235, 0.7));
+}
+
+.secondaryBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: var(--text);
+}
+
+.help {
+  margin-top: 1rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.error {
+  margin-top: 0.75rem;
+  color: #ff8d8d;
+}
+
+.statusBox {
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}

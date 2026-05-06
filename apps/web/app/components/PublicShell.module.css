@@ -1,0 +1,598 @@
+.shell {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  transition: grid-template-columns 480ms cubic-bezier(0.4, 0, 0.2, 1);
+  isolation: isolate;
+
+  /*
+   * Imagen de fondo (cielo con nubes) común a TODAS las vistas públicas.
+   * - El archivo debe existir en `apps/web/public/sky-bg.jpg`.
+   * - `background-attachment: scroll` (default) hace que se mueva con el scroll.
+   * - `background-size: 100% auto` mantiene proporciones y ancho 100%.
+   * - `background-repeat: repeat-y` la repite verticalmente cuando la
+   *   página excede el alto de la imagen.
+   * - El gradiente translúcido va ENCIMA de la imagen para suavizarla
+   *   sin tapar el cielo.
+   */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.22) 60%,
+      rgba(255, 255, 255, 0.28) 100%
+    ),
+    url('/sky-bg.jpg');
+  background-size: auto, 100% auto;
+  background-repeat: repeat-y, repeat-y;
+  background-position: top, top;
+  background-attachment: scroll, scroll;
+}
+
+:root[data-theme="dark"] .shell {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 18, 31, 0.55) 0%,
+      rgba(8, 18, 31, 0.65) 60%,
+      rgba(8, 18, 31, 0.75) 100%
+    ),
+    url('/sky-bg.jpg');
+  background-size: auto, 100% auto;
+  background-repeat: repeat-y, repeat-y;
+  background-position: top, top;
+  background-attachment: scroll, scroll;
+}
+
+.shellCollapsed {
+  grid-template-columns: 104px minmax(0, 1fr);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 1.15rem;
+  border-right: 1px solid rgba(15, 76, 129, 0.16);
+  /*
+   * Estado EXPANDIDO (hover en desktop / abierto en móvil): sólido.
+   * El estado colapsado (.sidebarCollapsed) lo override más abajo a translúcido.
+   * La transición hace que pase suavemente al hacer hover.
+   */
+  background:
+    radial-gradient(circle at top left, rgba(15, 76, 129, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.94));
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  overflow: hidden;
+  z-index: 40;
+  /* Transición lenta y suave para que sea casi imperceptible. */
+  transition:
+    background 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    backdrop-filter 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    -webkit-backdrop-filter 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-right-color 620ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Estado COLAPSADO (mini): translúcido para que el cielo se vea
+ * detrás del sidebar.
+ */
+.sidebar.sidebarCollapsed {
+  background:
+    radial-gradient(circle at top left, rgba(15, 76, 129, 0.10), transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.24));
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+}
+
+/*
+ * En móvil el drawer abierto debe ser sólido aunque conserve la clase
+ * sidebarCollapsed (override por especificidad).
+ */
+.sidebar.sidebarOpen,
+.sidebar.sidebarOpen.sidebarCollapsed {
+  background:
+    radial-gradient(circle at top left, rgba(15, 76, 129, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 253, 0.96));
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+}
+
+:root[data-theme="dark"] .sidebar {
+  border-right-color: rgba(220, 232, 250, 0.10);
+  background:
+    radial-gradient(circle at top left, rgba(111, 168, 220, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(17, 27, 43, 0.94), rgba(9, 17, 29, 0.96));
+}
+
+:root[data-theme="dark"] .sidebar.sidebarCollapsed {
+  background:
+    radial-gradient(circle at top left, rgba(111, 168, 220, 0.14), transparent 50%),
+    linear-gradient(180deg, rgba(8, 18, 31, 0.42), rgba(8, 18, 31, 0.28));
+}
+
+:root[data-theme="dark"] .sidebar.sidebarOpen,
+:root[data-theme="dark"] .sidebar.sidebarOpen.sidebarCollapsed {
+  background:
+    radial-gradient(circle at top left, rgba(111, 168, 220, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(17, 27, 43, 0.96), rgba(9, 17, 29, 0.98));
+}
+
+.sidebarGlow {
+  position: absolute;
+  inset: auto auto -120px -70px;
+  width: 230px;
+  height: 230px;
+  border-radius: 999px;
+  background: rgba(31, 79, 163, 0.12);
+  filter: blur(36px);
+  pointer-events: none;
+}
+
+:root[data-theme="dark"] .sidebarGlow {
+  background: rgba(140, 176, 255, 0.12);
+}
+
+.collapseHamburger {
+  position: absolute;
+  top: 1.15rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-1);
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.collapseHamburger:hover,
+.menuBtn:hover,
+.themeBtn:hover,
+.closeBtn:hover {
+  transform: translateY(-1px);
+  background: var(--bg-surface-strong);
+  border-color: var(--border-strong);
+}
+
+.collapseHamburger span,
+.menuBtn span {
+  width: 15px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: var(--text-main);
+}
+
+.brand {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.55rem 0 1.25rem;
+}
+
+.logo {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: var(--gradient-soft);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-1);
+  flex-shrink: 0;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.brandTitle {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.brandSubtitle {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.closeBtn,
+.menuBtn,
+.themeBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-1);
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+:root[data-theme="dark"] .closeBtn,
+:root[data-theme="dark"] .menuBtn,
+:root[data-theme="dark"] .themeBtn,
+:root[data-theme="dark"] .collapseHamburger {
+  background: rgba(17, 27, 43, 0.78);
+}
+
+.closeBtn {
+  display: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sidebarSummary {
+  margin-bottom: 1.2rem;
+  padding: 1.15rem;
+  border-radius: 22px;
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-1);
+}
+
+.sidebarEyebrow,
+.topbarEyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.sidebarDescription {
+  margin-top: 0.65rem;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.navItem {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.82rem 0.9rem;
+  border-radius: 20px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.navItem:hover {
+  transform: translateY(-1px);
+  background: var(--state-hover);
+  border-color: var(--border-soft);
+}
+
+.active {
+  background: var(--gradient-soft);
+  border-color: rgba(31, 79, 163, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34), var(--shadow-1);
+}
+
+.navIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-secondary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+:root[data-theme="dark"] .navIcon {
+  background: rgba(17, 27, 43, 0.82);
+}
+
+.navIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.navCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.navLabel {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.navDescription {
+  font-size: 0.84rem;
+  color: var(--text-soft);
+}
+
+.footer {
+  margin-top: auto;
+  padding: 1rem 0.2rem 0;
+}
+
+.adminLink {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent, #2563eb) 18%, transparent);
+  background: color-mix(in srgb, var(--accent, #2563eb) 6%, transparent);
+  color: var(--accent, #2563eb);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.15s ease;
+  margin-bottom: 0.75rem;
+}
+
+.adminLink:hover {
+  background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+.adminIcon {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex-shrink: 0;
+}
+
+.adminLabel {
+  white-space: nowrap;
+}
+
+.sidebarCollapsed .adminLink {
+  justify-content: center;
+  padding: 0.55rem;
+}
+
+.sidebarCollapsed .adminLabel {
+  display: none;
+}
+
+.footerHint {
+  display: inline-flex;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
+:root[data-theme="dark"] .footerHint {
+  background: rgba(17, 27, 43, 0.78);
+}
+
+.content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 1.6rem;
+  /*
+   * Default (sidebar expandido): sólido.
+   * El estado translúcido se activa SOLO cuando el shell está colapsado
+   * — coordinado con el sidebar para que ambos cambien al unísono.
+   */
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(15, 76, 129, 0.12);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition:
+    background 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    backdrop-filter 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    -webkit-backdrop-filter 620ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-bottom-color 620ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cuando el sidebar lateral está colapsado, el topbar también es translúcido. */
+.shellCollapsed .topbar {
+  background: rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+}
+
+:root[data-theme="dark"] .topbar {
+  background: rgba(8, 18, 31, 0.96);
+  border-bottom-color: rgba(220, 232, 250, 0.10);
+}
+
+:root[data-theme="dark"] .shellCollapsed .topbar {
+  background: rgba(8, 18, 31, 0.38);
+}
+
+.menuBtn {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topbarInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.topbarTitle {
+  font-size: clamp(1.2rem, 2vw, 1.75rem);
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
+}
+
+.themeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.themeIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.page {
+  min-width: 0;
+  padding: 1.25rem 0 2.4rem;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: var(--overlay);
+  z-index: 35;
+}
+
+.sidebarCollapsed .brand {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  padding-top: 3rem;
+}
+
+.sidebarCollapsed .brandText,
+.sidebarCollapsed .sidebarSummary,
+.sidebarCollapsed .navCopy,
+.sidebarCollapsed .footer {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sidebarCollapsed .collapseHamburger {
+  right: 50%;
+  transform: translateX(50%);
+}
+
+.sidebarCollapsed .navItem {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  padding-inline: 0.6rem;
+}
+
+.sidebarCollapsed .navIcon {
+  width: 52px;
+  height: 52px;
+}
+
+.sidebarCollapsed .closeBtn {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .shell,
+  .shellCollapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar,
+  .sidebarCollapsed {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: min(320px, 86vw);
+    transform: translateX(-104%);
+    transition: transform 220ms ease;
+    box-shadow: var(--shadow-3);
+  }
+
+  .sidebarOpen,
+  .sidebarCollapsed.sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .sidebarCollapsed .brand,
+  .sidebarCollapsed .brandText,
+  .sidebarCollapsed .sidebarSummary,
+  .sidebarCollapsed .navCopy,
+  .sidebarCollapsed .footer,
+  .sidebarCollapsed .closeBtn {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .sidebarCollapsed .brand {
+    grid-template-columns: auto 1fr auto;
+    justify-items: initial;
+    padding-top: 0.55rem;
+  }
+
+  .sidebarCollapsed .navItem {
+    grid-template-columns: 48px 1fr;
+    justify-items: initial;
+  }
+
+  .sidebarCollapsed .collapseHamburger {
+    display: none;
+  }
+
+  .closeBtn,
+  .menuBtn {
+    display: inline-flex;
+  }
+
+  .topbar {
+    padding-inline: 1rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding-top: 0.75rem;
+  }
+
+  .topbar {
+    padding-block: 1rem;
+  }
+
+  .topbarTitle {
+    font-size: 1.1rem;
+  }
+}

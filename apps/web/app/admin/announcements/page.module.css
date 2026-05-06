@@ -1,0 +1,341 @@
+.container {
+  max-width: 1100px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+  color: var(--text);
+}
+
+/* ─────────── HEADER ─────────── */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--text);
+}
+
+/* Botón nuevo anuncio */
+.newButton {
+  background: linear-gradient(135deg, var(--accent), rgba(37, 99, 235, 0.65));
+  color: #fff;
+  text-decoration: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-1);
+}
+
+:root[data-theme="dark"] .newButton {
+  background: linear-gradient(135deg, var(--accent), rgba(96, 165, 250, 0.55));
+}
+
+.newButton:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* ─────────── TABLE ─────────── */
+
+.tableWrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+
+/* En oscuro, devuelve un poco de profundidad “admin” sin volverse negro duro */
+:root[data-theme="dark"] .tableWrapper {
+  background: linear-gradient(180deg, var(--surface), rgba(0, 0, 0, 0.18));
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: var(--surface-2);
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.9rem 1rem;
+
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: 0.9rem 1rem;
+  font-size: 0.85rem;
+  vertical-align: middle;
+
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.table tbody tr:hover {
+  background: var(--accent-weak);
+}
+
+/* Título con jerarquía */
+.title {
+  font-weight: 500;
+}
+
+/* ─────────── ACTIONS ─────────── */
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.editLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.editLink:hover {
+  text-decoration: underline;
+}
+
+/* Delete: se deja rojo fijo (no hay token de danger) */
+.deleteButton {
+  background: transparent;
+  border: 1px solid #ff5f5f;
+  color: #ff5f5f;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: rgba(255, 95, 95, 0.12);
+}
+
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─────────── TOAST ─────────── */
+
+.toast {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-2);
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast.success {
+  background: #16a34a;
+  color: #fff;
+}
+
+.toast.error {
+  background: #dc2626;
+  color: #fff;
+}
+
+.toastClose {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.toastClose:hover {
+  opacity: 1;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ─────────── CONFIRM DIALOG ─────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  box-shadow: var(--shadow-2);
+}
+
+.dialogTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.dialogText {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dialogCancel {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dialogCancel:hover {
+  background: var(--surface-2);
+}
+
+.dialogConfirm {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dialogConfirm:hover {
+  background: #b91c1c;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─────────── SKELETON ─────────── */
+
+.skeletonHeader {
+  height: 2.5rem;
+  width: 250px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  animation: pulse 1.5s infinite;
+  margin-bottom: 2rem;
+}
+
+.skeletonTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeletonRow {
+  height: 3.5rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+/* ─────────── ERROR & EMPTY ─────────── */
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.retryButton {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.retryButton:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+.emptyState p {
+  margin-bottom: 1.25rem;
+  font-size: 0.95rem;
+}
+
+/* ─────────── RESPONSIVE ─────────── */
+
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.75rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}

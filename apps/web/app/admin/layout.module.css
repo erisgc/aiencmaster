@@ -1,0 +1,235 @@
+.root {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.publicMain {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* ───────── Mobile topbar ───────── */
+
+.mobileTop {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobileMenuBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.mobileMenuBtn span {
+  display: block;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+}
+
+.mobileTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  border: none;
+}
+
+/* ───────── Sidebar ───────── */
+
+.sidebar {
+  width: 240px;
+  padding: 1.25rem 1rem;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.sidebarClose {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.sidebarTop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.sessionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: var(--accent-weak);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.sessionBox strong {
+  font-size: 0.92rem;
+}
+
+.sessionBox span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.roleBadge {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.18rem 0.55rem;
+  border-radius: 100px;
+  background: var(--accent-emerald);
+  color: #fff !important;
+  font-size: 0.7rem !important;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav a {
+  display: block;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav a:hover {
+  background: var(--state-hover);
+  color: var(--text);
+}
+
+.navActive {
+  background: var(--accent-weak) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* ───────── Main ───────── */
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  min-width: 0;
+}
+
+.logoutBtn {
+  margin-top: auto;
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.logoutBtn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ───────── Dark polish ───────── */
+
+:root[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, var(--surface), rgba(0, 0, 0, 0.18));
+}
+
+/* ───────── Responsive ───────── */
+
+@media (max-width: 900px) {
+  .root {
+    flex-direction: column;
+  }
+
+  .mobileTop {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 70;
+    width: 270px;
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .backdrop {
+    display: block;
+  }
+
+  .sidebarClose {
+    display: inline-block;
+  }
+
+  .main {
+    padding: 1.25rem;
+  }
+}
