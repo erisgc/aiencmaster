@@ -633,6 +633,54 @@ export class AdminAuthService {
       );
     }
 
+    /*
+     * MODO RELAJADO (temporal):
+     * Si ADMIN_DEVICE_VERIFICATION_DISABLED=true, cualquier dispositivo
+     * que pueda autenticar con usuario+contraseña entra como APPROVED
+     * sin necesidad de aprobación previa por el ROOT_DEVICE.
+     *
+     * El roleScope (ROOT_DEVICE / APPROVED_DEVICE) se preserva si ya
+     * existía; los devices nuevos se crean como APPROVED_DEVICE.
+     *
+     * Cuando se restablezca la seguridad, basta con quitar la variable
+     * de entorno y borrar los devices APPROVED creados durante el modo
+     * relajado.
+     */
+    if (process.env.ADMIN_DEVICE_VERIFICATION_DISABLED === "true") {
+      const device = await this.upsertDeviceAsApproved(
+        existingDevice,
+        account,
+        deviceInput,
+        req,
+      );
+
+      account.lastLoginAt = new Date();
+      await this.accountRepo.save(account);
+
+      await this.sessionService.issueActiveSession(reply, account, device);
+
+      await this.auditService.log({
+        actorAdminAccountId: account.id,
+        actorDeviceId: device.id,
+        actionType: "LOGIN_SUCCEEDED_DEVICE_VERIFICATION_DISABLED",
+        targetType: "ADMIN_ACCOUNT",
+        targetId: account.id,
+        description:
+          "Login con verificación de dispositivo deshabilitada (modo relajado).",
+        ip: this.sessionService.getRequestIp(req),
+        userAgent: this.sessionService.getRequestUserAgent(req),
+        metadata: { deviceId: device.deviceId },
+      });
+
+      this.resetRateLimit("admin-login", req, username);
+
+      return {
+        status: "ACTIVE",
+        account: this.sessionService.serializeAccount(account),
+        device: this.sessionService.serializeDevice(device),
+      };
+    }
+
     let latestRequest = await this.findLatestAccessRequest(
       account.id,
       deviceInput.deviceId,
@@ -944,6 +992,59 @@ export class AdminAuthService {
         userAgent: device.userAgent,
         ip: this.sessionService.getRequestIp(req),
         status: AdminAccessRequestStatus.PENDING,
+      }),
+    );
+  }
+
+  /**
+   * Crea o actualiza un dispositivo dejándolo como APPROVED, vinculado
+   * al `account` indicado. Usado por el modo relajado de verificación
+   * de dispositivos (ADMIN_DEVICE_VERIFICATION_DISABLED).
+   *
+   * Si el dispositivo ya existía con `roleScope = ROOT_DEVICE`, se
+   * preserva ese roleScope (no degradamos un root device existente).
+   */
+  private async upsertDeviceAsApproved(
+    existingDevice: AdminDevice | null,
+    account: AdminAccount,
+    deviceInput: DeviceInput,
+    req: AdminRequest,
+  ): Promise<AdminDevice> {
+    const now = new Date();
+    const ip = this.sessionService.getRequestIp(req);
+    const userAgent = this.sessionService.getRequestUserAgent(req);
+
+    if (existingDevice) {
+      existingDevice.adminAccountId = account.id;
+      existingDevice.deviceName = deviceInput.deviceName;
+      existingDevice.platform = deviceInput.platform;
+      existingDevice.browser = deviceInput.browser;
+      existingDevice.userAgent = userAgent;
+      existingDevice.ipLastSeen = ip;
+      existingDevice.lastSeenAt = now;
+      existingDevice.status = AdminDeviceStatus.APPROVED;
+      if (!existingDevice.approvedAt) existingDevice.approvedAt = now;
+      // Si era ROOT_DEVICE, mantenemos. Si no, dejamos APPROVED_DEVICE.
+      if (existingDevice.roleScope !== AdminDeviceScope.ROOT_DEVICE) {
+        existingDevice.roleScope = AdminDeviceScope.APPROVED_DEVICE;
+      }
+      existingDevice.revokedAt = null;
+      return this.deviceRepo.save(existingDevice);
+    }
+
+    return this.deviceRepo.save(
+      this.deviceRepo.create({
+        adminAccountId: account.id,
+        deviceId: deviceInput.deviceId,
+        deviceName: deviceInput.deviceName,
+        platform: deviceInput.platform,
+        browser: deviceInput.browser,
+        userAgent,
+        ipLastSeen: ip,
+        roleScope: AdminDeviceScope.APPROVED_DEVICE,
+        status: AdminDeviceStatus.APPROVED,
+        approvedAt: now,
+        lastSeenAt: now,
       }),
     );
   }
