@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Proxy interno hacia el backend (Railway / local).
@@ -7,13 +7,6 @@ import { NextRequest } from "next/server";
  * backend real. Reescribe los `Set-Cookie` quitando el atributo `Domain`
  * para que las cookies se asocien al dominio del frontend (Vercel) y
  * sean first-party — evitando bloqueos de cookies third-party.
- *
- * Variables de entorno:
- *   - API_INTERNAL_URL    URL privada al backend (preferida).
- *   - NEXT_PUBLIC_API_URL Fallback público (si la primera no existe).
- *   - WEB_ORIGIN          Origen permitido (se reenvía al backend
- *                         para que el AdminOriginGuard acepte la
- *                         request).
  */
 
 export const dynamic = "force-dynamic";
@@ -31,6 +24,20 @@ function getBackendUrl(): string {
   return url.replace(/\/$/, "");
 }
 
+const HOP_BY_HOP_HEADERS = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailers",
+  "transfer-encoding",
+  "upgrade",
+  "host",
+  "content-length",
+  "accept-encoding",
+]);
+
 async function proxy(
   req: NextRequest,
   ctx: { params: Promise<{ path: string[] }> },
@@ -41,86 +48,78 @@ async function proxy(
 
   const outgoingHeaders = new Headers();
   req.headers.forEach((value, key) => {
-    const k = key.toLowerCase();
-    // Headers que NO debemos reenviar tal cual
-    if (
-      k === "host" ||
-      k === "connection" ||
-      k === "content-length" ||
-      k === "accept-encoding" ||
-      k === "transfer-encoding"
-    ) {
-      return;
-    }
+    if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
     outgoingHeaders.set(key, value);
   });
 
-  // Forzamos el Origin al WEB_ORIGIN para que el AdminOriginGuard del
-  // backend acepte la petición. La validación cross-site real ya la
-  // hizo el browser al permitir el fetch a /api-proxy (mismo dominio).
+  // El AdminOriginGuard del backend exige que el header Origin coincida
+  // con WEB_ORIGIN. La validación cross-site real ya la hizo el browser
+  // al permitir el fetch contra /api-proxy (mismo dominio que el frontend).
   const webOrigin =
     process.env.WEB_ORIGIN?.trim() ||
     `${incomingUrl.protocol}//${incomingUrl.host}`;
   outgoingHeaders.set("origin", webOrigin);
+  outgoingHeaders.set("referer", webOrigin);
 
   const hasBody = !["GET", "HEAD"].includes(req.method);
-  const init: RequestInit & { duplex?: "half" } = {
-    method: req.method,
-    headers: outgoingHeaders,
-    redirect: "manual",
-    cache: "no-store",
-  };
+  let bodyBuffer: ArrayBuffer | null = null;
   if (hasBody) {
-    // Streaming del body. `duplex: 'half'` es requerido por undici cuando
-    // el body es un ReadableStream.
-    init.body = req.body;
-    init.duplex = "half";
+    bodyBuffer = await req.arrayBuffer();
   }
 
   let upstream: Response;
   try {
-    upstream = await fetch(target, init);
+    upstream = await fetch(target, {
+      method: req.method,
+      headers: outgoingHeaders,
+      body: bodyBuffer,
+      redirect: "manual",
+      cache: "no-store",
+    });
   } catch (err) {
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         message: "Upstream unreachable",
         error: err instanceof Error ? err.message : String(err),
-      }),
-      {
-        status: 502,
-        headers: { "content-type": "application/json" },
       },
+      { status: 502 },
     );
   }
 
-  // Reescribir Set-Cookie: quitar Domain= y Path= que apunten al
-  // backend, para que las cookies queden bajo el dominio del frontend.
-  const setCookies =
-    typeof (upstream.headers as Headers & { getSetCookie?: () => string[] })
-      .getSetCookie === "function"
-      ? (
-          upstream.headers as Headers & { getSetCookie: () => string[] }
-        ).getSetCookie()
-      : [];
+  // Bufferizamos el body completo para evitar problemas de streaming
+  // entre Node fetch y la response que devolvemos a Vercel.
+  const responseBuffer = await upstream.arrayBuffer();
 
-  const responseHeaders = new Headers();
+  const response = new NextResponse(responseBuffer, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+  });
+
+  // Copiar headers excepto los que manejamos a parte (set-cookie, encoding…)
   upstream.headers.forEach((value, key) => {
     const k = key.toLowerCase();
-    if (k === "set-cookie") return; // Las manejamos abajo
+    if (k === "set-cookie") return;
     if (k === "transfer-encoding" || k === "content-encoding") return;
-    responseHeaders.set(key, value);
+    if (k === "content-length") return; // recalculado por NextResponse
+    response.headers.set(key, value);
   });
+
+  // Reescribir Set-Cookie: quitar Domain= para que la cookie aplique al
+  // dominio del frontend. Append uno a uno (multi-valor estándar).
+  const upstreamHeaders = upstream.headers as Headers & {
+    getSetCookie?: () => string[];
+  };
+  const setCookies =
+    typeof upstreamHeaders.getSetCookie === "function"
+      ? upstreamHeaders.getSetCookie()
+      : [];
 
   for (const raw of setCookies) {
     const cleaned = raw.replace(/;\s*Domain=[^;]+/i, "");
-    responseHeaders.append("set-cookie", cleaned);
+    response.headers.append("set-cookie", cleaned);
   }
 
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  });
+  return response;
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
