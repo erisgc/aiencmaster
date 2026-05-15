@@ -6,6 +6,7 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/invite_screen.dart';
 import '../features/auth/lock_screen.dart';
 import '../features/auth/setup_lock_screen.dart';
+import '../features/churches/church_edit_screen.dart';
 import '../features/reports/new_report_screen.dart';
 import '../features/shell/home_shell.dart';
 import 'state/auth_state.dart';
@@ -59,6 +60,11 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/reports/new',
         builder: (_, __) => const NewReportScreen(),
+      ),
+      GoRoute(
+        path: '/churches/:id/edit',
+        builder: (_, state) =>
+            ChurchEditScreen(churchId: state.pathParameters['id']!),
       ),
     ],
   );

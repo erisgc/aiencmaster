@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
@@ -71,8 +72,10 @@ class _ChurchesScreenState extends State<ChurchesScreen> {
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 10),
                             itemCount: _items.length,
-                            itemBuilder: (_, i) =>
-                                _ChurchTile(church: _items[i]),
+                            itemBuilder: (_, i) => _ChurchTile(
+                              church: _items[i],
+                              onChanged: _load,
+                            ),
                           ),
                         ),
         ),
@@ -83,16 +86,27 @@ class _ChurchesScreenState extends State<ChurchesScreen> {
 
 class _ChurchTile extends StatelessWidget {
   final Church church;
-  const _ChurchTile({required this.church});
+  final Future<void> Function() onChanged;
+  const _ChurchTile({required this.church, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
+    // Sólo permitimos abrir la edición si el usuario actual tiene permiso
+    // EDIT_CHURCH_INFO sobre esta iglesia (o es ROOT).
+    final acct = Locator.authState.account;
+    final canEdit = acct != null &&
+        acct.hasChurchPermission(church.id, ChurchPermission.EDIT_CHURCH_INFO);
+
     return GemCard(
       padding: const EdgeInsets.all(14),
-      onTap: () {
-        // Por ahora la app sólo muestra info. Edición vendrá en una siguiente
-        // pasada para evitar inflar el MVP.
-      },
+      onTap: canEdit
+          ? () async {
+              final changed = await context.push<bool>(
+                '/churches/${church.id}/edit',
+              );
+              if (changed == true) await onChanged();
+            }
+          : null,
       child: Row(
         children: [
           Container(

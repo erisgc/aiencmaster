@@ -366,6 +366,77 @@ class InvitationPreview {
       );
 }
 
+// ── Invitaciones administrativas ───────────────────────────────────────
+
+class AdminInvitation {
+  final String id;
+  final String username;
+  final String displayName;
+  final String assignedChurchId;
+  final String? assignedChurchName;
+  final String status; // PENDING | ACCEPTED | REVOKED | EXPIRED
+  final DateTime expiresAt;
+  final DateTime? acceptedAt;
+  final DateTime createdAt;
+
+  AdminInvitation({
+    required this.id,
+    required this.username,
+    required this.displayName,
+    required this.assignedChurchId,
+    required this.assignedChurchName,
+    required this.status,
+    required this.expiresAt,
+    required this.acceptedAt,
+    required this.createdAt,
+  });
+
+  factory AdminInvitation.fromJson(Map<String, dynamic> j) => AdminInvitation(
+        id: j['id'] as String,
+        username: j['username'] as String? ?? '',
+        displayName: j['displayName'] as String? ?? '',
+        assignedChurchId: j['assignedChurchId'] as String? ?? '',
+        assignedChurchName: j['assignedChurchName'] as String?,
+        status: j['status'] as String? ?? 'EXPIRED',
+        expiresAt: DateTime.tryParse(j['expiresAt'] as String? ?? '') ??
+            DateTime.now(),
+        acceptedAt: j['acceptedAt'] != null
+            ? DateTime.tryParse(j['acceptedAt'] as String)
+            : null,
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
+}
+
+class CreatedInvitation {
+  final String id;
+  final String token; // sólo se devuelve UNA vez, al crear
+  final String username;
+  final String displayName;
+  final String assignedChurchId;
+  final DateTime expiresAt;
+
+  CreatedInvitation({
+    required this.id,
+    required this.token,
+    required this.username,
+    required this.displayName,
+    required this.assignedChurchId,
+    required this.expiresAt,
+  });
+
+  factory CreatedInvitation.fromJson(Map<String, dynamic> j) =>
+      CreatedInvitation(
+        id: j['id'] as String,
+        token: j['token'] as String? ?? '',
+        username: j['username'] as String? ?? '',
+        displayName: j['displayName'] as String? ?? '',
+        assignedChurchId: j['assignedChurchId'] as String? ?? '',
+        expiresAt: DateTime.tryParse(j['expiresAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
+}
+
 // ── Iglesias ───────────────────────────────────────────────────────────
 
 class Church {

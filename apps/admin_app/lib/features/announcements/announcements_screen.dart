@@ -6,6 +6,7 @@ import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
 import '../../core/widgets/gem_widgets.dart';
+import 'announcement_edit_screen.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -22,11 +23,18 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
   bool _loadingGlobal = true;
   bool _loadingChurch = true;
   String? _error;
+  int _tabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _tabs.addListener(() {
+      if (_tabs.indexIsChanging) return;
+      if (_tabIndex != _tabs.index) {
+        setState(() => _tabIndex = _tabs.index);
+      }
+    });
     _load();
   }
 
@@ -57,7 +65,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
         final c = await Locator.announcements.listForChurch(churchId);
         if (mounted) setState(() => _church = c);
       } catch (_) {
-        // si no tiene permisos, deja vacío
+        // sin permisos: dejamos lista vacía silenciosamente
       } finally {
         if (mounted) setState(() => _loadingChurch = false);
       }
@@ -66,35 +74,131 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
     }
   }
 
+  bool get _canCreateGlobal {
+    final a = Locator.authState.account;
+    if (a == null) return false;
+    return a.hasGlobalPermission(GlobalPermission.MANAGE_GLOBAL_ANNOUNCEMENTS);
+  }
+
+  bool get _canCreateChurch {
+    final a = Locator.authState.account;
+    final cid = Locator.authState.activeChurchId;
+    if (a == null || cid == null) return false;
+    return a.hasChurchPermission(
+      cid,
+      ChurchPermission.MANAGE_CHURCH_ANNOUNCEMENTS,
+    );
+  }
+
+  Future<void> _openEditor({String? churchId, Announcement? existing}) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AnnouncementEditScreen(
+          churchId: churchId,
+          existing: existing,
+        ),
+      ),
+    );
+    if (changed == true) {
+      await _load();
+    }
+  }
+
+  Future<void> _delete(Announcement a, {required bool isGlobal}) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar anuncio'),
+        content: Text('¿Eliminar el anuncio "${a.title}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      if (isGlobal) {
+        await Locator.announcements.deleteGlobal(a.id);
+      } else {
+        final cid = Locator.authState.activeChurchId;
+        if (cid == null) return;
+        await Locator.announcements.deleteFromChurch(cid, a.id);
+      }
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Anuncio eliminado.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(userMessageFor(e))),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final isOnGlobalTab = _tabIndex == 0;
+    final canCreate =
+        isOnGlobalTab ? _canCreateGlobal : _canCreateChurch;
+
+    return Stack(
       children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          alignment: Alignment.centerLeft,
-          child: Text('Anuncios',
-              style: Theme.of(context).textTheme.headlineSmall),
-        ),
-        TabBar(
-          controller: _tabs,
-          indicatorColor: GemPalette.emerald,
-          labelColor: GemPalette.textPrimary,
-          unselectedLabelColor: GemPalette.textMuted,
-          tabs: const [
-            Tab(text: 'Globales'),
-            Tab(text: 'Mi iglesia'),
+        Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              alignment: Alignment.centerLeft,
+              child: Text('Anuncios',
+                  style: Theme.of(context).textTheme.headlineSmall),
+            ),
+            TabBar(
+              controller: _tabs,
+              indicatorColor: GemPalette.emerald,
+              labelColor: GemPalette.textPrimary,
+              unselectedLabelColor: GemPalette.textMuted,
+              tabs: const [
+                Tab(text: 'Globales'),
+                Tab(text: 'Mi iglesia'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabs,
+                children: [
+                  _buildList(_global, _loadingGlobal, isGlobal: true),
+                  _buildList(_church, _loadingChurch, isGlobal: false),
+                ],
+              ),
+            ),
           ],
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabs,
-            children: [
-              _buildList(_global, _loadingGlobal, isGlobal: true),
-              _buildList(_church, _loadingChurch, isGlobal: false),
-            ],
+        if (canCreate)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              backgroundColor: GemPalette.emerald,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Nuevo anuncio'),
+              onPressed: () => _openEditor(
+                churchId: isOnGlobalTab
+                    ? null
+                    : Locator.authState.activeChurchId,
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -122,13 +226,24 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
         ),
       );
     }
+
+    final canManage = isGlobal ? _canCreateGlobal : _canCreateChurch;
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemCount: items.length,
-        itemBuilder: (_, i) => _AnnouncementCard(item: items[i]),
+        itemBuilder: (_, i) => _AnnouncementCard(
+          item: items[i],
+          canManage: canManage,
+          onEdit: () => _openEditor(
+            churchId: isGlobal ? null : Locator.authState.activeChurchId,
+            existing: items[i],
+          ),
+          onDelete: () => _delete(items[i], isGlobal: isGlobal),
+        ),
       ),
     );
   }
@@ -136,7 +251,15 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
 
 class _AnnouncementCard extends StatelessWidget {
   final Announcement item;
-  const _AnnouncementCard({required this.item});
+  final bool canManage;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  const _AnnouncementCard({
+    required this.item,
+    required this.canManage,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +314,27 @@ class _AnnouncementCard extends StatelessWidget {
                           color: GemPalette.emerald, fontSize: 12),
                     ),
                   ),
+              ],
+            ),
+          ],
+          if (canManage) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('Editar'),
+                  onPressed: onEdit,
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  icon: const Icon(Icons.delete_outline,
+                      size: 16, color: GemPalette.danger),
+                  label: const Text('Eliminar',
+                      style: TextStyle(color: GemPalette.danger)),
+                  onPressed: onDelete,
+                ),
               ],
             ),
           ],

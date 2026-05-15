@@ -7,6 +7,8 @@ import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
 import '../../core/widgets/gem_widgets.dart';
+import 'account_permissions_screen.dart';
+import 'invitations_screen.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -100,26 +102,60 @@ class _SecurityScreenState extends State<SecurityScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                         children: [
                           GemCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Administradores',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Las acciones avanzadas (crear invitaciones, '
-                                  'cambiar permisos) se hacen desde la web.',
-                                  style: TextStyle(
-                                      color: GemPalette.textMuted,
-                                      height: 1.4,
-                                      fontSize: 12.5),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const InvitationsScreen(),
                                 ),
+                              );
+                              if (mounted) await _load();
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    gradient: GemPalette
+                                        .sapphireEmeraldGradient,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.mail_outline_rounded,
+                                      color: Colors.white),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Invitaciones',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const Text(
+                                        'Generar enlaces para nuevos administradores y revocar los pendientes',
+                                        style: TextStyle(
+                                            color: GemPalette.textMuted,
+                                            fontSize: 12.5,
+                                            height: 1.35),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right,
+                                    color: GemPalette.textMuted),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 14),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Text('Administradores',
+                                style: Theme.of(context).textTheme.titleMedium),
+                          ),
+                          const SizedBox(height: 6),
                           for (final a in _accounts) _accountTile(a),
                         ],
                       ),
@@ -185,14 +221,77 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Future<void> _openHistory(AdminAccount a) async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _AccountHistoryScreen(accountId: a.id),
+    final action = await showModalBottomSheet<_AccountAction>(
+      context: context,
+      backgroundColor: GemPalette.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 6),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: GemPalette.borderSoft,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                a.displayName,
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Ver historial'),
+              onTap: () =>
+                  Navigator.pop(ctx, _AccountAction.history),
+            ),
+            if (!a.isRoot)
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: const Text('Gestionar permisos'),
+                onTap: () =>
+                    Navigator.pop(ctx, _AccountAction.permissions),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
+    if (!mounted) return;
+    switch (action) {
+      case _AccountAction.history:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _AccountHistoryScreen(accountId: a.id),
+          ),
+        );
+        break;
+      case _AccountAction.permissions:
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AccountPermissionsScreen(accountId: a.id),
+          ),
+        );
+        if (mounted) await _load();
+        break;
+      case null:
+        break;
+    }
   }
 }
+
+enum _AccountAction { history, permissions }
 
 class _AccountHistoryScreen extends StatefulWidget {
   final String accountId;
