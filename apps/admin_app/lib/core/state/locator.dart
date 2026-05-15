@@ -1,0 +1,29 @@
+import '../api/api_client.dart';
+import '../services/auth_service.dart';
+import '../services/data_services.dart';
+import '../services/local_auth_service.dart';
+import 'auth_state.dart';
+
+/// Locator manual. Suficiente para un MVP — evita añadir get_it/riverpod.
+class Locator {
+  Locator._();
+
+  static late final AuthService auth;
+  static late final LocalAuthService localAuth;
+  static late final ChurchService churches;
+  static late final AnnouncementService announcements;
+  static late final ReportService reports;
+  static late final SecurityService security;
+  static late final AuthState authState;
+
+  static Future<void> init() async {
+    await ApiClient.init();
+    auth = AuthService(ApiClient.I);
+    localAuth = LocalAuthService();
+    churches = ChurchService(ApiClient.I);
+    announcements = AnnouncementService(ApiClient.I);
+    reports = ReportService(ApiClient.I);
+    security = SecurityService(ApiClient.I);
+    authState = AuthState(auth: auth, localAuth: localAuth);
+  }
+}

@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Permitimos SCREAMING_CASE en enums para que coincidan exactamente con
+    # los nombres del backend AIENC (ReportType, ChurchPermission, etc.).
+    constant_identifier_names: false
+    # Estamos usando _, __, ___ para parámetros ignorados de builders / itemBuilder
+    # — es un patrón común en Flutter y no añade ruido real.
+    unnecessary_underscores: false
