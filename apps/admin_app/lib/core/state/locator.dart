@@ -14,6 +14,7 @@ class Locator {
   static late final AnnouncementService announcements;
   static late final ReportService reports;
   static late final SecurityService security;
+  static late final InvitationService invitations;
   static late final AuthState authState;
 
   static Future<void> init() async {
@@ -24,6 +25,7 @@ class Locator {
     announcements = AnnouncementService(ApiClient.I);
     reports = ReportService(ApiClient.I);
     security = SecurityService(ApiClient.I);
+    invitations = InvitationService(ApiClient.I);
     authState = AuthState(auth: auth, localAuth: localAuth);
   }
 }
