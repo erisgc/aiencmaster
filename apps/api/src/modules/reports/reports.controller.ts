@@ -42,6 +42,25 @@ export class ReportsController {
     return this.service.findAll(query, actor.account);
   }
 
+  /**
+   * Métricas agregadas para dashboards: serie temporal por mes de
+   * ofrendas, egresos y asistencia, más agregados por iglesia.
+   * Filtra automáticamente por el scope del actor.
+   */
+  @Get("metrics/timeline")
+  metricsTimeline(
+    @Query("churchId") churchId: string | undefined,
+    @Query("fromDate") fromDate: string | undefined,
+    @Query("toDate") toDate: string | undefined,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.service.metricsTimeline(actor.account, {
+      churchId,
+      fromDate,
+      toDate,
+    });
+  }
+
   @Get(":id")
   findOne(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,

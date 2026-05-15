@@ -7,9 +7,11 @@ import { AdminAccount } from './admin-account.entity';
 import { AdminAccessRequest } from './admin-access-request.entity';
 import { AdminActionLog } from './admin-action-log.entity';
 import { AdminAuditService } from './admin-audit.service';
+import { AdminChurchAssignment } from './admin-church-assignment.entity';
 import { AdminSecurityService } from './admin-security.service';
 import { AdminSessionService } from './admin-session.service';
 import { AdminDevice } from './admin_device.entity';
+import { Church } from '../churches/church.entity';
 import { AdminAccessRequestStatus } from './enums/admin-access-request-status.enum';
 import { AdminDeviceScope } from './enums/admin-device-scope.enum';
 import { AdminDeviceStatus } from './enums/admin-device-status.enum';
@@ -46,6 +48,8 @@ describe('AdminSecurityService', () => {
   const deviceRepo = createRepoMock<AdminDevice>();
   const accessRequestRepo = createRepoMock<AdminAccessRequest>();
   const auditRepo = createRepoMock<AdminActionLog>();
+  const assignmentRepo = createRepoMock<AdminChurchAssignment>();
+  const churchRepo = createRepoMock<Church>();
 
   const sessionService = {
     accessRequestTtlSeconds: 86400,
@@ -112,6 +116,14 @@ describe('AdminSecurityService', () => {
         {
           provide: getRepositoryToken(AdminActionLog),
           useValue: auditRepo,
+        },
+        {
+          provide: getRepositoryToken(AdminChurchAssignment),
+          useValue: assignmentRepo,
+        },
+        {
+          provide: getRepositoryToken(Church),
+          useValue: churchRepo,
         },
         {
           provide: DataSource,

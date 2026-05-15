@@ -11,6 +11,7 @@ import { AdminAccount } from "./admin-account.entity";
 import { AdminAccessRequest } from "./admin-access-request.entity";
 import { AdminActionLog } from "./admin-action-log.entity";
 import { AdminAuditService } from "./admin-audit.service";
+import { AdminChurchAssignment } from "./admin-church-assignment.entity";
 import { AdminSessionService } from "./admin-session.service";
 import { AdminDevice } from "./admin_device.entity";
 import { CreateAdminAccountDto } from "./dto/create-admin-account.dto";
@@ -22,7 +23,14 @@ import { AdminAccessRequestStatus } from "./enums/admin-access-request-status.en
 import { AdminDeviceScope } from "./enums/admin-device-scope.enum";
 import { AdminDeviceStatus } from "./enums/admin-device-status.enum";
 import { AdminRole } from "./enums/admin-role.enum";
+import {
+  ChurchPermission,
+  GlobalPermission,
+  PERMISSION_CATALOG,
+  PERMISSION_TEMPLATES,
+} from "./permissions/permission.enums";
 import { AuthenticatedAdminContext } from "./admin-security.types";
+import { Church } from "../churches/church.entity";
 
 @Injectable()
 export class AdminSecurityService {
@@ -35,6 +43,10 @@ export class AdminSecurityService {
     private readonly accessRequestRepo: Repository<AdminAccessRequest>,
     @InjectRepository(AdminActionLog)
     private readonly auditRepo: Repository<AdminActionLog>,
+    @InjectRepository(AdminChurchAssignment)
+    private readonly assignmentRepo: Repository<AdminChurchAssignment>,
+    @InjectRepository(Church)
+    private readonly churchRepo: Repository<Church>,
     private readonly dataSource: DataSource,
     private readonly sessionService: AdminSessionService,
     private readonly auditService: AdminAuditService,
@@ -47,8 +59,21 @@ export class AdminSecurityService {
       displayName: account.displayName,
       role: account.role,
       isActive: account.isActive,
+      // Mantenido por compatibilidad UI vieja.
       assignedChurchId: account.assignedChurchId ?? null,
       assignedChurchName: account.assignedChurch?.name ?? null,
+      // Permisos efectivos.
+      globalPermissions:
+        account.role === AdminRole.ROOT
+          ? Object.values(GlobalPermission)
+          : (account.globalPermissions ?? []),
+      churchAssignments:
+        account.churchAssignments?.map((a) => ({
+          id: a.id,
+          churchId: a.churchId,
+          churchName: a.church?.name ?? null,
+          permissions: a.permissions ?? [],
+        })) ?? [],
       lastLoginAt: account.lastLoginAt?.toISOString() ?? null,
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString(),
@@ -429,7 +454,11 @@ export class AdminSecurityService {
   getAccounts() {
     return this.accountRepo
       .find({
-        relations: { devices: true, assignedChurch: true },
+        relations: {
+          devices: true,
+          assignedChurch: true,
+          churchAssignments: { church: true },
+        },
         order: { createdAt: "ASC" },
       })
       .then((accounts) =>
@@ -444,7 +473,11 @@ export class AdminSecurityService {
   async getAccountHistory(accountId: string) {
     const account = await this.accountRepo.findOne({
       where: { id: accountId },
-      relations: { assignedChurch: true },
+      relations: {
+        assignedChurch: true,
+        churchAssignments: { church: true },
+        devices: true,
+      },
     });
     if (!account) {
       throw new NotFoundException("Cuenta no encontrada");
@@ -453,7 +486,7 @@ export class AdminSecurityService {
     const logs = await this.auditRepo.find({
       where: { actorAdminAccountId: accountId },
       order: { createdAt: "DESC" },
-      take: 200,
+      take: 500,
     });
 
     return {
@@ -653,5 +686,152 @@ export class AdminSecurityService {
           : null,
       })),
     );
+  }
+
+  /* ────────── Permisos ────────── */
+
+  /** Catálogo y templates legibles para el frontend. */
+  getPermissionsCatalog() {
+    return {
+      catalog: PERMISSION_CATALOG,
+      templates: PERMISSION_TEMPLATES,
+    };
+  }
+
+  /** Modifica los permisos globales de un admin (no aplica a ROOT). */
+  async updateGlobalPermissions(
+    accountId: string,
+    permissions: GlobalPermission[],
+    actor: AuthenticatedAdminContext,
+  ) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException("Cuenta no encontrada");
+    if (account.role === AdminRole.ROOT) {
+      throw new BadRequestException(
+        "La cuenta root tiene todos los permisos por defecto y no se editan aquí.",
+      );
+    }
+
+    account.globalPermissions = Array.from(new Set(permissions));
+    await this.accountRepo.save(account);
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "ADMIN_GLOBAL_PERMISSIONS_UPDATED",
+      targetType: "ADMIN_ACCOUNT",
+      targetId: account.id,
+      description: `Permisos globales actualizados para @${account.username}`,
+      metadata: { permissions: account.globalPermissions },
+    });
+
+    return this.getAccountWithAssignments(accountId);
+  }
+
+  /** Crea o reemplaza la asignación admin↔iglesia con sus permisos. */
+  async assignChurch(
+    accountId: string,
+    churchId: string,
+    permissions: ChurchPermission[],
+    actor: AuthenticatedAdminContext,
+  ) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException("Cuenta no encontrada");
+    if (account.role === AdminRole.ROOT) {
+      throw new BadRequestException(
+        "La cuenta root no requiere asignaciones; ya opera sobre todas las iglesias.",
+      );
+    }
+
+    const church = await this.churchRepo.findOne({ where: { id: churchId } });
+    if (!church) throw new NotFoundException("Iglesia no encontrada");
+
+    const dedup = Array.from(new Set(permissions));
+
+    const existing = await this.assignmentRepo.findOne({
+      where: { adminAccountId: accountId, churchId },
+    });
+
+    if (existing) {
+      existing.permissions = dedup;
+      await this.assignmentRepo.save(existing);
+
+      await this.auditService.log({
+        actorAdminAccountId: actor.account.id,
+        actorDeviceId: actor.device.id,
+        actionType: "ADMIN_CHURCH_PERMISSIONS_UPDATED",
+        targetType: "ADMIN_CHURCH_ASSIGNMENT",
+        targetId: existing.id,
+        description: `Permisos actualizados de @${account.username} en iglesia ${church.name}`,
+        metadata: { permissions: dedup, churchId },
+      });
+
+      return this.getAccountWithAssignments(accountId);
+    }
+
+    const created = await this.assignmentRepo.save(
+      this.assignmentRepo.create({
+        adminAccountId: accountId,
+        churchId,
+        permissions: dedup,
+      }),
+    );
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "ADMIN_CHURCH_ASSIGNED",
+      targetType: "ADMIN_CHURCH_ASSIGNMENT",
+      targetId: created.id,
+      description: `@${account.username} asignado a iglesia ${church.name}`,
+      metadata: { permissions: dedup, churchId },
+    });
+
+    return this.getAccountWithAssignments(accountId);
+  }
+
+  /** Elimina la asignación admin↔iglesia. */
+  async removeChurchAssignment(
+    accountId: string,
+    churchId: string,
+    actor: AuthenticatedAdminContext,
+  ) {
+    const existing = await this.assignmentRepo.findOne({
+      where: { adminAccountId: accountId, churchId },
+    });
+    if (!existing) {
+      throw new NotFoundException("La asignación no existe");
+    }
+
+    await this.assignmentRepo.remove(existing);
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType: "ADMIN_CHURCH_UNASSIGNED",
+      targetType: "ADMIN_CHURCH_ASSIGNMENT",
+      targetId: existing.id,
+      description: `Asignación de iglesia retirada`,
+      metadata: { churchId },
+    });
+
+    return this.getAccountWithAssignments(accountId);
+  }
+
+  private async getAccountWithAssignments(accountId: string) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+      relations: {
+        devices: true,
+        assignedChurch: true,
+        churchAssignments: { church: true },
+      },
+    });
+    if (!account) throw new NotFoundException("Cuenta no encontrada");
+    return this.serializeAccount(account);
   }
 }

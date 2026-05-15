@@ -5,6 +5,7 @@ import { ConfigModule } from "@nestjs/config";
 import { validateEnvironment } from "./config/environment.validation";
 import { AdminSecurityModule } from "./modules/admin-security/admin-security.module";
 import { AnnouncementsModule } from "./modules/announcements/announcements.module";
+import { ChurchAnnouncementsModule } from "./modules/church-announcements/church-announcements.module";
 import { ChurchesModule } from "./modules/churches/churches.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { SiteModule } from "./modules/site/site.module";
@@ -64,6 +65,7 @@ function buildTypeOrmOptions(): TypeOrmModuleOptions {
     TypeOrmModule.forRoot(buildTypeOrmOptions()),
     AdminSecurityModule,
     AnnouncementsModule,
+    ChurchAnnouncementsModule,
     ChurchesModule,
     ReportsModule,
     SiteModule,

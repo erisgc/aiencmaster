@@ -12,11 +12,16 @@ import {
 
 import { AdminAuth } from "./decorators/admin-auth.decorator";
 import { AdminSecurityService } from "./admin-security.service";
+import {
+  AssignChurchDto,
+  UpdateChurchPermissionsDto,
+} from "./dto/assign-church.dto";
 import { CreateAdminAccountDto } from "./dto/create-admin-account.dto";
 import { QueryAuditLogDto } from "./dto/query-audit-log.dto";
 import { ResetAdminPasswordDto } from "./dto/reset-admin-password.dto";
 import { ResolveAccessRequestDto } from "./dto/resolve-access-request.dto";
 import { UpdateAdminAccountDto } from "./dto/update-admin-account.dto";
+import { UpdateGlobalPermissionsDto } from "./dto/update-global-permissions.dto";
 import { AdminAuthGuard } from "./guards/admin-auth.guard";
 import { AdminOriginGuard } from "./guards/admin-origin.guard";
 import { RootDeviceGuard } from "./guards/root-device.guard";
@@ -108,5 +113,63 @@ export class AdminSecurityController {
   @Get("accounts/:id/history")
   accountHistory(@Param("id", new ParseUUIDPipe({ version: "4" })) id: string) {
     return this.securityService.getAccountHistory(id);
+  }
+
+  /* ────────── Permisos ────────── */
+
+  @Get("permissions/catalog")
+  permissionsCatalog() {
+    return this.securityService.getPermissionsCatalog();
+  }
+
+  @Patch("accounts/:id/permissions")
+  updateGlobalPermissions(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() dto: UpdateGlobalPermissionsDto,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.securityService.updateGlobalPermissions(
+      id,
+      dto.permissions,
+      actor,
+    );
+  }
+
+  @Post("accounts/:id/churches")
+  assignChurch(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() dto: AssignChurchDto,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.securityService.assignChurch(
+      id,
+      dto.churchId,
+      dto.permissions ?? [],
+      actor,
+    );
+  }
+
+  @Patch("accounts/:id/churches/:churchId/permissions")
+  updateChurchPermissions(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Param("churchId", new ParseUUIDPipe({ version: "4" })) churchId: string,
+    @Body() dto: UpdateChurchPermissionsDto,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.securityService.assignChurch(
+      id,
+      churchId,
+      dto.permissions,
+      actor,
+    );
+  }
+
+  @Post("accounts/:id/churches/:churchId/remove")
+  removeChurchAssignment(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Param("churchId", new ParseUUIDPipe({ version: "4" })) churchId: string,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.securityService.removeChurchAssignment(id, churchId, actor);
   }
 }

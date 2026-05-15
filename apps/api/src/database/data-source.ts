@@ -7,8 +7,11 @@ import { AnnouncementAttachment } from "../modules/announcements/attachment.enti
 import { AdminAccount } from "../modules/admin-security/admin-account.entity";
 import { AdminAccessRequest } from "../modules/admin-security/admin-access-request.entity";
 import { AdminActionLog } from "../modules/admin-security/admin-action-log.entity";
+import { AdminChurchAssignment } from "../modules/admin-security/admin-church-assignment.entity";
 import { AdminDevice } from "../modules/admin-security/admin_device.entity";
 import { AdminInvitation } from "../modules/admin-security/admin-invitation.entity";
+import { ChurchAnnouncement } from "../modules/church-announcements/church-announcement.entity";
+import { ChurchAnnouncementAttachment } from "../modules/church-announcements/church-announcement-attachment.entity";
 import { ChurchDirector } from "../modules/churches/church-director.entity";
 import { Church } from "../modules/churches/church.entity";
 import { Report } from "../modules/reports/report.entity";
@@ -39,10 +42,13 @@ const ENTITIES = [
   AdminAccessRequest,
   AdminActionLog,
   AdminInvitation,
+  AdminChurchAssignment,
   Announcement,
   AnnouncementAttachment,
   Church,
   ChurchDirector,
+  ChurchAnnouncement,
+  ChurchAnnouncementAttachment,
   Report,
   SiteBackground,
   SiteSettings,

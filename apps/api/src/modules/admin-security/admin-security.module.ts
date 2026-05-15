@@ -10,7 +10,9 @@ import { AdminAccessRequest } from "./admin-access-request.entity";
 import { AdminActionLog } from "./admin-action-log.entity";
 import { AdminAuthController } from "./admin-auth.controller";
 import { AdminAuthService } from "./admin-auth.service";
+import { AdminAssignmentsMigratorService } from "./admin-assignments-migrator.service";
 import { AdminAuditService } from "./admin-audit.service";
+import { AdminChurchAssignment } from "./admin-church-assignment.entity";
 import { AdminInvitation } from "./admin-invitation.entity";
 import {
   AdminInvitationsController,
@@ -27,6 +29,8 @@ import { AdminAuthGuard } from "./guards/admin-auth.guard";
 import { AdminOriginGuard } from "./guards/admin-origin.guard";
 import { RootDeviceGuard } from "./guards/root-device.guard";
 import { RootRoleGuard } from "./guards/root-role.guard";
+import { GlobalPermissionsGuard } from "./permissions/global-permissions.guard";
+import { PermissionsService } from "./permissions/permissions.service";
 
 @Module({
   imports: [
@@ -37,6 +41,7 @@ import { RootRoleGuard } from "./guards/root-role.guard";
       AdminAccessRequest,
       AdminActionLog,
       AdminInvitation,
+      AdminChurchAssignment,
       Church,
     ]),
     CloudinaryModule,
@@ -60,6 +65,9 @@ import { RootRoleGuard } from "./guards/root-role.guard";
     AdminOriginGuard,
     RootRoleGuard,
     RootDeviceGuard,
+    PermissionsService,
+    GlobalPermissionsGuard,
+    AdminAssignmentsMigratorService,
   ],
   exports: [
     AdminAuditService,
@@ -68,6 +76,8 @@ import { RootRoleGuard } from "./guards/root-role.guard";
     AdminAuthGuard,
     RootRoleGuard,
     RootDeviceGuard,
+    PermissionsService,
+    GlobalPermissionsGuard,
     TypeOrmModule,
   ],
 })
