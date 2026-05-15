@@ -21,6 +21,7 @@ import {
   type SecurityDevice,
 } from '@/app/lib/admin-auth';
 import { formatDateTimeWithSeconds } from '@/app/lib/formatDate';
+import { actionTypeLabel, roleShortLabel } from '@/app/lib/i18n';
 import styles from './page.module.css';
 
 function badgeClass(status: string) {
@@ -430,7 +431,7 @@ export function SecurityPageClient() {
                     <span
                       className={badgeClass(account.isActive ? 'APPROVED' : 'REJECTED')}
                     >
-                      {account.role}
+                      {roleShortLabel(account.role)}
                     </span>
                   </p>
                   <div className={styles.meta}>
@@ -489,7 +490,7 @@ export function SecurityPageClient() {
 
         <div className={styles.logFilters}>
           <input
-            placeholder="Filtrar por actionType"
+            placeholder="Filtrar por tipo de acción"
             value={actionTypeFilter}
             onChange={(e) => setActionTypeFilter(e.target.value)}
           />
@@ -513,7 +514,7 @@ export function SecurityPageClient() {
                 <div>
                   <p className={styles.titleLine}>{log.description}</p>
                   <div className={styles.meta}>
-                    <span>{log.actionType}</span>
+                    <span>{actionTypeLabel(log.actionType)}</span>
                     <span>{log.targetType}</span>
                     <span>{log.actorAdminAccount?.displayName ?? 'Sistema'}</span>
                     <span>{formatDateTimeWithSeconds(log.createdAt)}</span>

@@ -18,6 +18,7 @@ import {
   type GlobalPermission,
   type PermissionsCatalogResponse,
 } from '@/app/lib/admin-permissions';
+import { roleLabel } from '@/app/lib/i18n';
 
 import styles from './page.module.css';
 
@@ -220,7 +221,7 @@ export function PermissionsPageClient({ accountId }: Props) {
         <div>
           <h1 className={styles.title}>Permisos de {data.account.displayName}</h1>
           <p className={styles.subtitle}>
-            @{data.account.username} · {data.account.role}
+            @{data.account.username} · {roleLabel(data.account.role)}
           </p>
         </div>
       </header>
@@ -229,9 +230,9 @@ export function PermissionsPageClient({ accountId }: Props) {
 
       {isRoot ? (
         <div className={styles.rootNotice}>
-          <strong>Esta cuenta es ROOT.</strong> Tiene todos los permisos
-          globales y sobre todas las iglesias por defecto. Los permisos no se
-          editan aquí — la cuenta root es el control total del sistema.
+          <strong>Esta es la cuenta principal del sistema.</strong> Tiene todos
+          los permisos globales y sobre todas las iglesias por defecto. Los
+          permisos no se editan aquí — la cuenta principal es el control total.
         </div>
       ) : (
         <>

@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
@@ -42,7 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       setState(() => _metrics = m);
     } catch (e) {
-      setState(() => _error = e is Exception ? e.toString() : 'Error');
+      setState(() => _error = userMessageFor(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
