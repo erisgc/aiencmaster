@@ -1,0 +1,67 @@
+name: admin_app
+description: "AIENC Admin - Panel administrativo movil"
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # HTTP + cookies persistentes (necesario para hablar con el backend
+  # que entrega cookies HttpOnly admin_session y admin_device).
+  dio: ^5.7.0
+  dio_cookie_manager: ^3.1.1
+  cookie_jar: ^4.0.8
+  path_provider: ^2.1.5
+
+  # Almacenamiento local. Usamos shared_preferences (no encriptado en disco)
+  # porque el PIN ya viaja hasheado y las cookies sensibles las maneja
+  # cookie_jar dentro del sandbox del app. flutter_secure_storage estaba
+  # encadenando deps de Windows (win32 6.x) que no compilan con SDK en path
+  # con espacios — se reactivará cuando reubiquemos el SDK Flutter.
+  shared_preferences: ^2.3.3
+
+  # Biometría → TODO. Para el MVP solo PIN local.
+  # local_auth pull-ea objective_c (build hook iOS) que falla en Windows con
+  # paths con espacios; lo reactivamos cuando se reubique el SDK o cuando
+  # local_auth deje de depender de objective_c.
+
+  # Routing declarativo con redirect on-unauth.
+  go_router: ^14.6.2
+
+  # Charts simples para el dashboard.
+  fl_chart: ^0.69.0
+
+  # Manejo de deep links de invitación aiencadmin://invite?token=...
+  app_links: ^6.3.2
+
+  # Formato fechas/numeros.
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+# path_provider_foundation 2.5+ pull-ea `objective_c`, cuyo build hook nativo
+# falla en Windows si el path del Flutter SDK tiene espacios. Como sólo
+# construimos Android, congelamos la versión iOS al último que NO pulla
+# objective_c.
+dependency_overrides:
+  # path_provider_foundation 2.5+ y win32 6.x añadieron native asset build
+  # hooks (vía objective_c / dart_native code_assets). Esos hooks invocan
+  # `dart compile kernel` desde Gradle pasando la ruta del Flutter SDK sin
+  # citar; cuando esa ruta tiene espacios (caso de este equipo) la build
+  # rompe. Pineamos a las últimas versiones SIN hook hasta resolver la ruta.
+  path_provider_foundation: 2.4.4
+  win32: 5.15.0
+
+
+flutter:
+  uses-material-design: true

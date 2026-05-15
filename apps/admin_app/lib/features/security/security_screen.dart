@@ -1,0 +1,270 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/models/domain.dart';
+import '../../core/state/locator.dart';
+import '../../core/theme/gem_palette.dart';
+import '../../core/widgets/gem_widgets.dart';
+
+class SecurityScreen extends StatefulWidget {
+  const SecurityScreen({super.key});
+
+  @override
+  State<SecurityScreen> createState() => _SecurityScreenState();
+}
+
+class _SecurityScreenState extends State<SecurityScreen> {
+  List<AdminAccount> _accounts = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final list = await Locator.security.listAccounts();
+      if (mounted) setState(() => _accounts = list);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('Seguridad',
+                    style: Theme.of(context).textTheme.headlineSmall),
+              ),
+              IconButton(
+                tooltip: 'Cerrar sesión',
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Cerrar sesión'),
+                      content: const Text(
+                          '¿Seguro que quieres salir? Tendrás que volver a iniciar sesión.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Salir'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (ok == true) {
+                    await Locator.authState.signOut();
+                    if (!context.mounted) return;
+                    context.go('/welcome');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null && _accounts.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GemErrorBanner(message: _error!),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                        children: [
+                          GemCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Administradores',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Las acciones avanzadas (crear invitaciones, '
+                                  'cambiar permisos) se hacen desde la web.',
+                                  style: TextStyle(
+                                      color: GemPalette.textMuted,
+                                      height: 1.4,
+                                      fontSize: 12.5),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          for (final a in _accounts) _accountTile(a),
+                        ],
+                      ),
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _accountTile(AdminAccount a) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GemCard(
+        padding: const EdgeInsets.all(14),
+        onTap: () => _openHistory(a),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: GemPalette.sapphireWeak,
+              child: Text(
+                a.displayName.isNotEmpty
+                    ? a.displayName.substring(0, 1).toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                    color: GemPalette.textPrimary,
+                    fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(a.displayName,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  Text('@${a.username}',
+                      style: const TextStyle(
+                          color: GemPalette.textMuted, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      GemBadge(
+                        label: a.role,
+                        color: a.role == 'ROOT'
+                            ? GemPalette.amethyst
+                            : GemPalette.sapphire,
+                      ),
+                      if (!a.isActive)
+                        const GemBadge(
+                            label: 'INACTIVA', color: GemPalette.danger),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: GemPalette.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openHistory(AdminAccount a) async {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _AccountHistoryScreen(accountId: a.id),
+      ),
+    );
+  }
+}
+
+class _AccountHistoryScreen extends StatefulWidget {
+  final String accountId;
+  const _AccountHistoryScreen({required this.accountId});
+
+  @override
+  State<_AccountHistoryScreen> createState() => _AccountHistoryScreenState();
+}
+
+class _AccountHistoryScreenState extends State<_AccountHistoryScreen> {
+  AccountHistoryResponse? _data;
+  String? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Locator.security
+        .accountHistory(widget.accountId)
+        .then((d) {
+          if (mounted) setState(() => _data = d);
+        })
+        .catchError((e) {
+          if (mounted) setState(() => _error = e.toString());
+        })
+        .whenComplete(() {
+          if (mounted) setState(() => _loading = false);
+        });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _data;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Historial')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GemErrorBanner(message: _error!),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemCount: d?.actions.length ?? 0,
+                  itemBuilder: (_, i) {
+                    final a = d!.actions[i];
+                    return GemCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a.actionType,
+                            style: const TextStyle(
+                              color: GemPalette.emerald,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(a.description),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${a.createdAt.toLocal()}',
+                            style: const TextStyle(
+                                color: GemPalette.textMuted, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}

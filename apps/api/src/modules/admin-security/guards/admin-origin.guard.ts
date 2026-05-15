@@ -21,16 +21,20 @@ export class AdminOriginGuard implements CanActivate {
       return true;
     }
 
-    const allowedOrigin = this.getAllowedOrigin();
+    const allowedOrigins = this.getAllowedOrigins();
     const origin = this.extractOriginHeader(request.headers.origin);
     const referer = this.extractHeader(request.headers.referer);
 
     // Para requests que modifican estado (POST/PUT/PATCH/DELETE)
     // requerimos presencia explícita de Origin o Referer válido.
-    // Si ambos están ausentes o ambos son inválidos, rechazamos.
-    const originAllowed = origin !== null && origin === allowedOrigin;
+    // Aceptamos:
+    //   - WEB_ORIGIN (la web Next.js en producción/local)
+    //   - MOBILE_APP_ORIGIN (la app Flutter, ej. "aiencadmin://app")
+    // Si tanto Origin como Referer son inválidos, rechazamos.
+    const originAllowed = origin !== null && allowedOrigins.includes(origin);
     const refererAllowed =
-      referer !== null && this.matchesAllowedOrigin(referer, allowedOrigin);
+      referer !== null &&
+      allowedOrigins.some((o) => this.matchesAllowedOrigin(referer, o));
 
     if (originAllowed || refererAllowed) {
       return true;
@@ -50,17 +54,39 @@ export class AdminOriginGuard implements CanActivate {
       metadata: {
         origin,
         referer,
-        allowedOrigin,
+        allowedOrigins,
       },
     });
 
     throw new ForbiddenException("Invalid request origin");
   }
 
-  private getAllowedOrigin() {
-    const configured =
+  /**
+   * Lista de orígenes válidos. Por defecto sólo el `WEB_ORIGIN` (la web
+   * Next.js), pero si `MOBILE_APP_ORIGIN` está configurado se acepta también.
+   * El valor típico para la app Flutter es `aiencadmin://app`, que coincide
+   * con el esquema custom registrado en AndroidManifest.xml.
+   */
+  private getAllowedOrigins(): string[] {
+    const web =
       process.env.WEB_ORIGIN?.trim() || "http://localhost:3000";
-    return new URL(configured).origin;
+    const origins: string[] = [];
+    try {
+      origins.push(new URL(web).origin);
+    } catch {
+      // configuración inválida — fallback al default
+      origins.push("http://localhost:3000");
+    }
+    const mobile = process.env.MOBILE_APP_ORIGIN?.trim();
+    if (mobile && mobile.length > 0) {
+      try {
+        // URL("aiencadmin://app").origin → "aiencadmin://app"
+        origins.push(new URL(mobile).origin);
+      } catch {
+        // ignorar valor mal formado
+      }
+    }
+    return origins;
   }
 
   private extractOriginHeader(value: unknown) {
