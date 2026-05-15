@@ -156,35 +156,84 @@
   letter-spacing: 0.04em;
 }
 
-/* ── Filtro ── */
+/* ── Filtros ── */
 
 .filterRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--shadow-1);
 }
 
-.filterRow label {
-  font-size: 0.78rem;
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filterGroup label {
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.filterRow input {
-  padding: 0.65rem 0.85rem;
-  border-radius: 12px;
+.filterGroup input,
+.filterGroup select {
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
   border: 1px solid var(--border-soft);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
-.filterRow input:focus {
+.filterGroup input:focus,
+.filterGroup select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.clearFiltersBtn {
+  align-self: end;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.clearFiltersBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.deepLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.deepLink:hover {
+  text-decoration: underline;
+}
+
+.deletedHint {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.82rem;
 }
 
 /* ── Timeline ── */
@@ -321,4 +370,30 @@
   .statsCard {
     justify-content: space-around;
   }
+}
+
+/* ── Permisos action ── */
+.actionsRow {
+  margin-top: 0.6rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.permLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, var(--gem-sapphire), var(--gem-emerald));
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.15s ease;
+}
+
+.permLink:hover {
+  transform: translateY(-1px);
 }

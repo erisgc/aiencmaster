@@ -7,6 +7,11 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
+import type {
+  ChurchPermission,
+  GlobalPermission,
+} from "./permissions/permission.enums";
+
 export enum AdminInvitationStatus {
   PENDING = "PENDING",
   ACCEPTED = "ACCEPTED",
@@ -39,6 +44,20 @@ export class AdminInvitation {
   /** Iglesia que el admin podrá administrar. */
   @Column({ type: "uuid" })
   assignedChurchId!: string;
+
+  /**
+   * Permisos por iglesia pre-asignados. Se aplican al aceptar la
+   * invitación creando un AdminChurchAssignment con estos permisos.
+   */
+  @Column({ type: "jsonb", default: () => "'[]'::jsonb" })
+  churchPermissions!: ChurchPermission[];
+
+  /**
+   * Permisos globales pre-asignados (opcional). Si el ROOT quiere
+   * delegar algún permiso global desde el inicio.
+   */
+  @Column({ type: "jsonb", default: () => "'[]'::jsonb" })
+  globalPermissions!: GlobalPermission[];
 
   /** Quién creó la invitación (ROOT). */
   @Column({ type: "uuid" })

@@ -11,6 +11,11 @@ import {
   type AdminInvitationSummary,
 } from '@/app/lib/admin-invitations';
 import { adminGetChurches, type Church } from '@/app/lib/admin-churches';
+import {
+  adminGetPermissionsCatalog,
+  type ChurchPermission,
+  type PermissionsCatalogResponse,
+} from '@/app/lib/admin-permissions';
 import { formatDateTimeWithSeconds } from '@/app/lib/formatDate';
 
 import styles from './page.module.css';
@@ -18,6 +23,9 @@ import styles from './page.module.css';
 export function InvitationsClient() {
   const [invitations, setInvitations] = useState<AdminInvitationSummary[]>([]);
   const [churches, setChurches] = useState<Church[]>([]);
+  const [catalog, setCatalog] = useState<PermissionsCatalogResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +33,10 @@ export function InvitationsClient() {
   const [formUsername, setFormUsername] = useState('');
   const [formDisplayName, setFormDisplayName] = useState('');
   const [formChurchId, setFormChurchId] = useState('');
+  const [formTemplate, setFormTemplate] = useState('PASTOR');
+  const [formPermissions, setFormPermissions] = useState<ChurchPermission[]>(
+    [],
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{
@@ -34,12 +46,19 @@ export function InvitationsClient() {
 
   const refresh = useCallback(async () => {
     try {
-      const [list, churchList] = await Promise.all([
+      const [list, churchList, cat] = await Promise.all([
         adminListInvitations(),
         adminGetChurches(),
+        adminGetPermissionsCatalog(),
       ]);
       setInvitations(list);
       setChurches(churchList);
+      setCatalog(cat);
+      // Inicializar template "Pastor" si no hay nada elegido
+      if (formPermissions.length === 0) {
+        const pastor = cat.templates.find((t) => t.key === 'PASTOR');
+        if (pastor) setFormPermissions(pastor.churchPermissions);
+      }
       setError(null);
     } catch (err) {
       setError(
@@ -50,7 +69,21 @@ export function InvitationsClient() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function applyTemplate(templateKey: string) {
+    setFormTemplate(templateKey);
+    const tpl = catalog?.templates.find((t) => t.key === templateKey);
+    if (tpl) setFormPermissions(tpl.churchPermissions);
+  }
+
+  function togglePermission(p: ChurchPermission) {
+    setFormTemplate('CUSTOM');
+    setFormPermissions((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+    );
+  }
 
   useEffect(() => {
     void refresh();
@@ -81,12 +114,19 @@ export function InvitationsClient() {
         username,
         displayName,
         assignedChurchId: formChurchId,
+        churchPermissions: formPermissions,
       });
       const url = `${window.location.origin}/admin/invite/${encodeURIComponent(inv.token)}`;
       setCreatedLink({ url, invitation: inv });
       setFormUsername('');
       setFormDisplayName('');
       setFormChurchId('');
+      // Reset al template Pastor para la próxima invitación
+      const pastor = catalog?.templates.find((t) => t.key === 'PASTOR');
+      if (pastor) {
+        setFormTemplate('PASTOR');
+        setFormPermissions(pastor.churchPermissions);
+      }
       await refresh();
     } catch (err) {
       setFormError(
@@ -175,8 +215,9 @@ export function InvitationsClient() {
           <div className={styles.field}>
             <label>Iglesia asignada</label>
             <span className={styles.hint}>
-              El admin sólo podrá generar informes y gestionar datos de la
-              iglesia que selecciones aquí.
+              El admin sólo podrá gestionar datos y subir informes de la
+              iglesia que selecciones. Después podrás asignarle más iglesias
+              desde el panel de permisos.
             </span>
             <select
               value={formChurchId}
@@ -191,6 +232,61 @@ export function InvitationsClient() {
               ))}
             </select>
           </div>
+
+          {catalog && (
+            <>
+              <div className={styles.field}>
+                <label>Rol que va a tener</label>
+                <span className={styles.hint}>
+                  Cada preset deja explícito qué permisos marca. Si ninguno
+                  encaja, selecciona &quot;Personalizado&quot; y márcalos uno
+                  a uno.
+                </span>
+                <div className={styles.templateGrid}>
+                  {catalog.templates.map((tpl) => (
+                    <button
+                      key={tpl.key}
+                      type="button"
+                      className={`${styles.templateBtn} ${formTemplate === tpl.key ? styles.templateBtnActive : ''}`}
+                      onClick={() => applyTemplate(tpl.key)}
+                    >
+                      <strong>{tpl.name}</strong>
+                      <span>{tpl.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label>Permisos efectivos sobre la iglesia</label>
+                <ul className={styles.permList}>
+                  {catalog.catalog
+                    .filter((c) => c.group === 'church')
+                    .map((d) => (
+                      <li key={d.key} className={styles.permItem}>
+                        <label className={styles.permLabel}>
+                          <input
+                            type="checkbox"
+                            checked={formPermissions.includes(
+                              d.key as ChurchPermission,
+                            )}
+                            onChange={() =>
+                              togglePermission(d.key as ChurchPermission)
+                            }
+                          />
+                          <span>
+                            <strong>{d.label}</strong>
+                            <span className={styles.permDesc}>
+                              {d.description}
+                            </span>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            </>
+          )}
 
           {formError && <p className={styles.formError}>{formError}</p>}
 

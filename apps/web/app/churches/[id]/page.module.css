@@ -395,3 +395,119 @@
   color: var(--gem-sapphire);
   font-weight: 500;
 }
+
+/* ── Anuncios de la iglesia (público) ── */
+
+.announcementsSection {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.announcementsHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.announcementsCount {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.announcementsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.announcementCard {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.announcementCard::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--gem-sapphire), var(--gem-emerald));
+}
+
+.announcementMeta {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  align-items: center;
+}
+
+.announcementAuthor {
+  font-weight: 700;
+  color: var(--gem-sapphire);
+}
+
+.announcementDate::before {
+  content: '·';
+  margin-right: 0.4rem;
+  opacity: 0.5;
+}
+
+.announcementTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.announcementDesc {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.announcementAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.announcementAttachLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 100px;
+  background: var(--accent-emerald-weak);
+  color: var(--accent-emerald);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.announcementAttachLink:hover {
+  text-decoration: underline;
+}

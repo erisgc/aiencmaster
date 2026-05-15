@@ -94,14 +94,28 @@ export type SecurityDevice = {
   } | null;
 };
 
+import type {
+  ChurchPermission,
+  GlobalPermission,
+} from './admin-permissions';
+
 export type SecurityAccount = {
   id: string;
   username: string;
   displayName: string;
   role: AdminRole;
   isActive: boolean;
+  /** @deprecated mantenido por compatibilidad UI vieja. Usar churchAssignments. */
   assignedChurchId: string | null;
+  /** @deprecated mantenido por compatibilidad UI vieja. */
   assignedChurchName: string | null;
+  globalPermissions: GlobalPermission[];
+  churchAssignments: Array<{
+    id: string;
+    churchId: string;
+    churchName: string | null;
+    permissions: ChurchPermission[];
+  }>;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;

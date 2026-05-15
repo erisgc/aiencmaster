@@ -1,0 +1,358 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: var(--text);
+}
+
+.backLink {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+.errorBanner {
+  padding: 0.85rem 1.1rem;
+  border-radius: 14px;
+  background: var(--danger-weak);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  font-size: 0.85rem;
+}
+
+.rootNotice {
+  background: linear-gradient(
+    135deg,
+    var(--accent-emerald-weak),
+    var(--accent-topaz-weak)
+  );
+  border: 1px solid var(--accent-emerald);
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.section {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.sectionSubtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.sectionFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Lista de permisos ── */
+
+.permList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.permItem {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  transition: border-color 0.15s ease;
+}
+
+.permItem:hover {
+  border-color: var(--accent);
+}
+
+.permLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.permLabel input[type='checkbox'] {
+  margin-top: 0.2rem;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.permLabel span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.permLabel strong {
+  color: var(--text);
+}
+
+.permDesc {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* ── Botones ── */
+
+.primaryBtn {
+  background: linear-gradient(135deg, var(--gem-sapphire), var(--gem-emerald));
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  padding: 0.7rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.dangerBtn {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0.4rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: var(--danger-weak);
+}
+
+.emptyState {
+  background: var(--surface);
+  border: 1px dashed var(--border-soft);
+  border-radius: 18px;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ── Asignación de iglesia ── */
+
+.assignmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.assignmentCard {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.assignmentHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px dashed var(--border-soft);
+}
+
+.churchName {
+  font-size: 1rem;
+  color: var(--text);
+}
+
+/* ── Modal ── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modalCard {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modalTitle {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.modalText {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.field select {
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.templateBtn {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.templateBtn:hover {
+  border-color: var(--accent);
+}
+
+.templateBtn strong {
+  font-size: 0.92rem;
+}
+
+.templateBtn span {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.templateBtnActive {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}

@@ -233,3 +233,24 @@
     padding: 1.25rem;
   }
 }
+
+/* ── Church selector ── */
+.sidebarSelector {
+  margin-top: 0.6rem;
+}
+
+.mobileSelector {
+  margin-left: auto;
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobileSelector {
+    display: block;
+  }
+  .mobileSelector :global(.value),
+  .mobileSelector :global(select) {
+    max-width: 130px;
+    font-size: 0.78rem;
+  }
+}

@@ -52,6 +52,8 @@ export class AdminInvitationsController {
       displayName: dto.displayName,
       assignedChurchId: dto.assignedChurchId,
       createdByAdminAccountId: actor.account.id,
+      churchPermissions: dto.churchPermissions,
+      globalPermissions: dto.globalPermissions,
     });
 
     await this.auditService.log({

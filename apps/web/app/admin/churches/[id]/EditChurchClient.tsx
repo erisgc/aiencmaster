@@ -13,6 +13,7 @@ import {
   adminUpdateChurchMultipart,
 } from '@/app/lib/admin-churches';
 import { DirectorsManager } from './DirectorsManager';
+import { ChurchAnnouncementsManager } from './ChurchAnnouncementsManager';
 
 type PickedPoint = { lat: number; lng: number; url?: string };
 
@@ -536,6 +537,9 @@ export function EditChurchClient({ initialChurch }: { initialChurch: Church }) {
 
         {/* DIRECTORS */}
         <DirectorsManager churchId={initialChurch.id} />
+
+        {/* ANUNCIOS DE LA IGLESIA */}
+        <ChurchAnnouncementsManager churchId={initialChurch.id} />
 
         {/* DANGER */}
         <section className={`${styles.card} ${styles.dangerCard}`}>

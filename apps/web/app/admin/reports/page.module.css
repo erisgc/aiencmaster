@@ -280,9 +280,20 @@
   background: var(--accent-topaz-weak);
   color: var(--accent-topaz);
 }
+.type_REQUEST {
+  background: color-mix(in srgb, var(--gem-amethyst, #7d4cdb) 16%, transparent);
+  color: var(--gem-amethyst, #7d4cdb);
+}
 .type_OTHER {
   background: var(--chip);
   color: var(--text-muted);
+}
+
+.itemSummary {
+  margin: 0.25rem 0 0;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 /* ── Form ── */

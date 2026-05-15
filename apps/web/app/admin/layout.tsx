@@ -9,6 +9,9 @@ import {
   adminLogout,
   type AdminSessionResponse,
 } from '@/app/lib/admin-auth';
+import { useIsMobileDevice } from '@/app/lib/useIsMobileDevice';
+import { ActiveChurchProvider } from './_components/ActiveChurchContext';
+import { ChurchSelector } from './_components/ChurchSelector';
 import styles from './layout.module.css';
 
 /**
@@ -21,10 +24,23 @@ function isPublicAdminPath(pathname: string | null) {
     pathname === '/admin/login' ||
     pathname === '/admin/bootstrap' ||
     pathname === '/admin/pending' ||
-    pathname === '/admin/recovery'
+    pathname === '/admin/recovery' ||
+    pathname === '/admin/mobile-required'
   ) {
     return true;
   }
+  if (pathname.startsWith('/admin/invite/')) return true;
+  return false;
+}
+
+/**
+ * Rutas que no deben redirigir a /admin/mobile-required incluso en phone.
+ * `/admin/invite/[token]` se exime aquí porque su propio cliente hace el
+ * redirect preservando el token de invitación.
+ */
+function isMobileAllowedPath(pathname: string | null) {
+  if (!pathname) return false;
+  if (pathname === '/admin/mobile-required') return true;
   if (pathname.startsWith('/admin/invite/')) return true;
   return false;
 }
@@ -40,6 +56,16 @@ export default function AdminLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isPublic = isPublicAdminPath(pathname);
+  const { isMobile, ready: mobileReady } = useIsMobileDevice();
+
+  // En phone, todo el panel administrativo está bloqueado: se obliga a usar
+  // la app nativa. La pantalla /admin/mobile-required y /admin/invite/[token]
+  // sí se renderizan (la última hace su propio redirect respetando token).
+  useEffect(() => {
+    if (!mobileReady || !isMobile) return;
+    if (isMobileAllowedPath(pathname)) return;
+    router.replace('/admin/mobile-required');
+  }, [mobileReady, isMobile, pathname, router]);
 
   useEffect(() => {
     if (isPublic) return;
@@ -88,6 +114,7 @@ export default function AdminLayout({
     pathname === href || pathname?.startsWith(`${href}/`);
 
   return (
+    <ActiveChurchProvider session={session}>
     <div className={styles.root}>
       {/* Topbar móvil */}
       <header className={styles.mobileTop}>
@@ -102,6 +129,9 @@ export default function AdminLayout({
           <span />
         </button>
         <span className={styles.mobileTitle}>Panel admin</span>
+        <div className={styles.mobileSelector}>
+          <ChurchSelector />
+        </div>
       </header>
 
       {mobileOpen && (
@@ -135,9 +165,19 @@ export default function AdminLayout({
               <span className={styles.roleBadge}>{session.account.role}</span>
             </div>
           )}
+
+          <div className={styles.sidebarSelector}>
+            <ChurchSelector />
+          </div>
         </div>
 
         <nav className={styles.nav}>
+          <Link
+            href="/admin/dashboard"
+            className={isActive('/admin/dashboard') ? styles.navActive : ''}
+          >
+            Métricas
+          </Link>
           <Link
             href="/admin/announcements"
             className={isActive('/admin/announcements') ? styles.navActive : ''}
@@ -183,5 +223,6 @@ export default function AdminLayout({
 
       <main className={styles.main}>{children}</main>
     </div>
+    </ActiveChurchProvider>
   );
 }
