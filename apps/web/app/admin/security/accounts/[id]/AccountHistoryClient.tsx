@@ -8,6 +8,11 @@ import {
   type AccountHistoryResponse,
 } from '@/app/lib/admin-auth';
 import { formatDateTimeWithSeconds } from '@/app/lib/formatDate';
+import {
+  actionTypeLabel,
+  roleShortLabel,
+  targetTypeLabel,
+} from '@/app/lib/i18n';
 
 import styles from './page.module.css';
 
@@ -164,7 +169,7 @@ export function AccountHistoryClient({ id }: Props) {
             <p className={styles.username}>@{data.account.username}</p>
             <div className={styles.tags}>
               <span className={`${styles.tag} ${styles[`role_${data.account.role}`]}`}>
-                {data.account.role}
+                {roleShortLabel(data.account.role)}
               </span>
               <span
                 className={`${styles.tag} ${data.account.isActive ? styles.active : styles.inactive}`}
@@ -215,7 +220,7 @@ export function AccountHistoryClient({ id }: Props) {
             <option value="">Todas</option>
             {actionTypes.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {actionTypeLabel(t)}
               </option>
             ))}
           </select>
@@ -279,7 +284,9 @@ export function AccountHistoryClient({ id }: Props) {
                   <div className={styles.timelineDot} aria-hidden />
                   <div className={styles.timelineContent}>
                     <div className={styles.timelineHead}>
-                      <code className={styles.actionType}>{action.actionType}</code>
+                      <span className={styles.actionType}>
+                        {actionTypeLabel(action.actionType)}
+                      </span>
                       <time className={styles.timelineDate}>
                         {formatDateTimeWithSeconds(action.createdAt)}
                       </time>
@@ -289,7 +296,7 @@ export function AccountHistoryClient({ id }: Props) {
                       <div>
                         <dt>Objeto</dt>
                         <dd>
-                          {action.targetType}
+                          {targetTypeLabel(action.targetType)}
                           {action.targetId ? ` · ${action.targetId.slice(0, 8)}…` : ''}
                           {deepLink ? (
                             <>

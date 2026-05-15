@@ -101,6 +101,150 @@ class PermissionsCatalog {
       );
 }
 
+// ── Etiquetas legibles (español) ───────────────────────────────────────
+
+/// Traduce el rol del backend ('ROOT' | 'ADMIN') a algo legible para el
+/// usuario final, que no necesariamente sabe inglés.
+String roleLabel(String role) {
+  switch (role) {
+    case 'ROOT':
+      return 'Administrador principal';
+    case 'ADMIN':
+      return 'Administrador';
+    default:
+      return role;
+  }
+}
+
+/// Versión corta del rol, pensada para badges/chips donde no cabe el texto
+/// largo. "Principal" para ROOT, "Admin" para ADMIN.
+String roleShortLabel(String role) {
+  switch (role) {
+    case 'ROOT':
+      return 'Principal';
+    case 'ADMIN':
+      return 'Admin';
+    default:
+      return role;
+  }
+}
+
+/// Traduce los códigos del log de auditoría a una descripción legible.
+/// Los códigos vienen del backend (admin-audit.service.ts) y combinan
+/// objeto + verbo en MAYÚSCULAS_CON_GUIONES.
+String actionTypeLabel(String code) {
+  switch (code) {
+    case 'ADMIN_LOGIN_SUCCESS':
+      return 'Inicio de sesión';
+    case 'ADMIN_LOGIN_FAILED':
+      return 'Intento de inicio de sesión fallido';
+    case 'ADMIN_LOGOUT':
+      return 'Cierre de sesión';
+    case 'ADMIN_INVITATION_CREATED':
+      return 'Invitación creada';
+    case 'ADMIN_INVITATION_REVOKED':
+      return 'Invitación revocada';
+    case 'ADMIN_INVITATION_ACCEPTED':
+      return 'Invitación aceptada';
+    case 'ADMIN_ACCOUNT_CREATED':
+      return 'Cuenta creada';
+    case 'ADMIN_ACCOUNT_DEACTIVATED':
+      return 'Cuenta desactivada';
+    case 'ADMIN_ACCOUNT_REACTIVATED':
+      return 'Cuenta reactivada';
+    case 'ADMIN_PERMISSIONS_UPDATED':
+      return 'Permisos actualizados';
+    case 'ADMIN_CHURCH_ASSIGNED':
+      return 'Iglesia asignada';
+    case 'ADMIN_CHURCH_UNASSIGNED':
+      return 'Iglesia removida';
+    case 'REPORT_CREATED':
+      return 'Informe creado';
+    case 'REPORT_UPDATED':
+      return 'Informe editado';
+    case 'REPORT_DELETED':
+      return 'Informe eliminado';
+    case 'ANNOUNCEMENT_CREATED':
+      return 'Anuncio creado';
+    case 'ANNOUNCEMENT_UPDATED':
+      return 'Anuncio editado';
+    case 'ANNOUNCEMENT_DELETED':
+      return 'Anuncio eliminado';
+    case 'CHURCH_ANNOUNCEMENT_CREATED':
+      return 'Anuncio de iglesia creado';
+    case 'CHURCH_ANNOUNCEMENT_UPDATED':
+      return 'Anuncio de iglesia editado';
+    case 'CHURCH_ANNOUNCEMENT_DELETED':
+      return 'Anuncio de iglesia eliminado';
+    case 'CHURCH_CREATED':
+      return 'Iglesia creada';
+    case 'CHURCH_UPDATED':
+      return 'Iglesia editada';
+    case 'CHURCH_DEACTIVATED':
+      return 'Iglesia desactivada';
+    case 'CHURCH_REACTIVATED':
+      return 'Iglesia reactivada';
+    case 'DIRECTOR_CREATED':
+      return 'Director añadido';
+    case 'DIRECTOR_UPDATED':
+      return 'Director editado';
+    case 'DIRECTOR_DELETED':
+      return 'Director eliminado';
+    case 'ADMIN_ORIGIN_REJECTED':
+      return 'Petición bloqueada (origen inválido)';
+    default:
+      // Fallback amable: transforma SNAKE_CASE → "Snake case"
+      final cleaned = code
+          .replaceAll('_', ' ')
+          .toLowerCase();
+      if (cleaned.isEmpty) return code;
+      return cleaned[0].toUpperCase() + cleaned.substring(1);
+  }
+}
+
+/// Etiqueta legible para el `targetType` que muestra el historial.
+String targetTypeLabel(String? targetType) {
+  switch (targetType) {
+    case 'REPORT':
+      return 'Informe';
+    case 'ANNOUNCEMENT':
+      return 'Anuncio global';
+    case 'CHURCH_ANNOUNCEMENT':
+      return 'Anuncio de iglesia';
+    case 'CHURCH':
+      return 'Iglesia';
+    case 'ADMIN_INVITATION':
+      return 'Invitación';
+    case 'ADMIN_ACCOUNT':
+      return 'Cuenta de administrador';
+    case 'DIRECTOR':
+      return 'Director';
+    case 'ADMIN_HTTP_REQUEST':
+      return 'Petición HTTP';
+    case null:
+    case '':
+      return '—';
+    default:
+      return targetType;
+  }
+}
+
+/// Estado de invitación a etiqueta en español.
+String invitationStatusLabel(String status) {
+  switch (status) {
+    case 'PENDING':
+      return 'Pendiente';
+    case 'ACCEPTED':
+      return 'Aceptada';
+    case 'REVOKED':
+      return 'Revocada';
+    case 'EXPIRED':
+      return 'Expirada';
+    default:
+      return status;
+  }
+}
+
 // ── Sesión / cuenta ────────────────────────────────────────────────────
 
 class ChurchAssignment {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
@@ -32,7 +33,7 @@ class _ChurchesScreenState extends State<ChurchesScreen> {
       final list = await Locator.churches.list();
       if (mounted) setState(() => _items = list);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userMessageFor(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

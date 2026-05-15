@@ -1,6 +1,7 @@
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -65,6 +66,20 @@ class _AdminAppState extends State<AdminApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(),
       routerConfig: _router,
+      // Forzamos español-Colombia en TODA la UI del sistema (date pickers,
+      // diálogos, tooltips de Material, mensajes de accesibilidad, etc.).
+      // Sin esto, los componentes del SDK salen en inglés cuando el idioma
+      // del dispositivo es inglés u otro.
+      locale: const Locale('es', 'CO'),
+      supportedLocales: const [
+        Locale('es', 'CO'),
+        Locale('es'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 }

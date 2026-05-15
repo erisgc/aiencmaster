@@ -17,6 +17,7 @@ import {
   type PermissionsCatalogResponse,
 } from '@/app/lib/admin-permissions';
 import { formatDateTimeWithSeconds } from '@/app/lib/formatDate';
+import { invitationStatusLabel } from '@/app/lib/i18n';
 
 import styles from './page.module.css';
 
@@ -360,7 +361,7 @@ export function InvitationsClient() {
                     <td>{inv.assignedChurchName ?? '—'}</td>
                     <td>
                       <span className={`${styles.badge} ${styles[`badge_${inv.status}`]}`}>
-                        {inv.status}
+                        {invitationStatusLabel(inv.status)}
                       </span>
                     </td>
                     <td>{formatDateTimeWithSeconds(inv.expiresAt)}</td>

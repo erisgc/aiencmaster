@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
@@ -45,7 +46,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
       final g = await Locator.announcements.listGlobal();
       if (mounted) setState(() => _global = g);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userMessageFor(e));
     } finally {
       if (mounted) setState(() => _loadingGlobal = false);
     }

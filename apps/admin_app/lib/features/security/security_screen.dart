@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
@@ -33,7 +35,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       final list = await Locator.security.listAccounts();
       if (mounted) setState(() => _accounts = list);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = userMessageFor(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -162,14 +164,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     runSpacing: 4,
                     children: [
                       GemBadge(
-                        label: a.role,
+                        label: roleShortLabel(a.role),
                         color: a.role == 'ROOT'
                             ? GemPalette.amethyst
                             : GemPalette.sapphire,
                       ),
                       if (!a.isActive)
                         const GemBadge(
-                            label: 'INACTIVA', color: GemPalette.danger),
+                            label: 'Inactiva', color: GemPalette.danger),
                     ],
                   ),
                 ],
@@ -214,7 +216,7 @@ class _AccountHistoryScreenState extends State<_AccountHistoryScreen> {
           if (mounted) setState(() => _data = d);
         })
         .catchError((e) {
-          if (mounted) setState(() => _error = e.toString());
+          if (mounted) setState(() => _error = userMessageFor(e));
         })
         .whenComplete(() {
           if (mounted) setState(() => _loading = false);
@@ -245,18 +247,20 @@ class _AccountHistoryScreenState extends State<_AccountHistoryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            a.actionType,
+                            actionTypeLabel(a.actionType),
                             style: const TextStyle(
                               color: GemPalette.emerald,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
+                              letterSpacing: 0.4,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(a.description),
                           const SizedBox(height: 6),
                           Text(
-                            '${a.createdAt.toLocal()}',
+                            DateFormat("d 'de' MMMM yyyy, HH:mm", 'es')
+                                .format(a.createdAt.toLocal()),
                             style: const TextStyle(
                                 color: GemPalette.textMuted, fontSize: 11),
                           ),

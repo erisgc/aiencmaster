@@ -10,6 +10,7 @@ import {
   type AdminSessionResponse,
 } from '@/app/lib/admin-auth';
 import { useIsMobileDevice } from '@/app/lib/useIsMobileDevice';
+import { roleShortLabel } from '@/app/lib/i18n';
 import { ActiveChurchProvider } from './_components/ActiveChurchContext';
 import { ChurchSelector } from './_components/ChurchSelector';
 import styles from './layout.module.css';
@@ -162,7 +163,9 @@ export default function AdminLayout({
             <div className={styles.sessionBox}>
               <strong>{session.account.displayName}</strong>
               <span>@{session.account.username}</span>
-              <span className={styles.roleBadge}>{session.account.role}</span>
+              <span className={styles.roleBadge}>
+                {roleShortLabel(session.account.role)}
+              </span>
             </div>
           )}
 

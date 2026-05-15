@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
 
@@ -41,8 +43,9 @@ dependencies:
   # Manejo de deep links de invitación aiencadmin://invite?token=...
   app_links: ^6.3.2
 
-  # Formato fechas/numeros.
-  intl: ^0.19.0
+  # Formato fechas/numeros. Pineado a 0.20.2 porque flutter_localizations
+  # (Flutter 3.41) fuerza esa versión exacta.
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

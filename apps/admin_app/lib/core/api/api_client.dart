@@ -126,28 +126,38 @@ class ApiException implements Exception {
   factory ApiException.fromResponse(Response res) {
     final code = res.statusCode ?? 0;
     final body = res.data;
-    String? serverMsg;
-    if (body is Map && body['message'] is String) {
-      serverMsg = body['message'] as String;
-    } else if (body is Map && body['message'] is List) {
-      serverMsg = (body['message'] as List).join(', ');
-    }
 
+    // No usamos body.message porque el backend NestJS devuelve los mensajes
+    // de validación en inglés ("Invalid request origin", "must be a UUID",
+    // etc.). El usuario final ve solo el mensaje friendly en español.
+    // Si quieres debug, raw queda disponible para logging.
     final friendly = switch (code) {
       400 => 'Datos inválidos.',
       401 => 'Sesión no válida. Inicia sesión de nuevo.',
       403 => 'No tienes permisos para esta acción.',
       404 => 'No encontrado.',
-      409 => 'Conflicto (ya existe o estado inválido).',
+      409 => 'Ya existe o el estado actual no lo permite.',
       413 => 'Archivo demasiado grande.',
       _ when code >= 500 => 'Error del servidor. Intenta más tarde.',
       _ => 'No se pudo completar la solicitud.',
     };
-    return ApiException(code, serverMsg ?? friendly, raw: body);
+    return ApiException(code, friendly, raw: body);
   }
 
+  /// Para `toString()` mostramos solo el mensaje legible — sin el código
+  /// HTTP ni el nombre de la clase, porque este string puede acabar en
+  /// banners de error visibles al usuario final.
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => message;
+}
+
+/// Extrae un mensaje legible para el usuario de cualquier error. Si es
+/// `ApiException` devuelve su `message` (ya en español); de lo contrario
+/// devuelve un fallback genérico — NO el `e.toString()` crudo, que puede
+/// exponer stack traces o mensajes en inglés del Dart SDK.
+String userMessageFor(Object e) {
+  if (e is ApiException) return e.message;
+  return 'No se pudo completar la operación. Intenta de nuevo.';
 }
 
 class _ErrorMappingInterceptor extends Interceptor {
