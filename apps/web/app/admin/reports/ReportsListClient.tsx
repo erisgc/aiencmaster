@@ -7,9 +7,13 @@ import {
   adminListReports,
   adminDeleteReport,
   REPORT_TYPE_LABELS,
+  EXPENSE_CATEGORY_LABELS,
+  REQUEST_STATUS_LABELS,
   type ReportSummary,
   type ReportType,
   type ReportsQuery,
+  type ExpenseCategory,
+  type RequestStatus,
 } from '@/app/lib/admin-reports';
 import { adminGetChurches, type Church } from '@/app/lib/admin-churches';
 import {
@@ -25,8 +29,59 @@ const REPORT_TYPES: ReportType[] = [
   'ATTENDANCE',
   'EXPENSES',
   'EVENT',
+  'REQUEST',
   'OTHER',
 ];
+
+/**
+ * Resumen corto de un dato puntual del reporte para mostrar en la lista
+ * (monto, categoría, scope, etc.) sin tener que abrir el detalle.
+ */
+function describeReport(report: ReportSummary): string | null {
+  const d = report.data ?? {};
+  switch (report.reportType) {
+    case 'OFFERINGS':
+      return d.totalCop != null
+        ? `$${Number(d.totalCop).toLocaleString('es-CO')} COP`
+        : null;
+    case 'EXPENSES': {
+      const amount =
+        d.totalCop != null
+          ? `$${Number(d.totalCop).toLocaleString('es-CO')} COP`
+          : null;
+      const cat =
+        typeof d.category === 'string'
+          ? EXPENSE_CATEGORY_LABELS[d.category as ExpenseCategory] ??
+            String(d.category)
+          : null;
+      return [cat, amount].filter(Boolean).join(' · ') || null;
+    }
+    case 'ATTENDANCE': {
+      const count = d.count != null ? `${d.count} asistentes` : null;
+      const scope = d.scope === 'session' ? 'culto' : 'mensual';
+      return count ? `${count} (${scope})` : null;
+    }
+    case 'EVENT':
+      return typeof d.name === 'string' ? d.name : null;
+    case 'REQUEST': {
+      const subj = typeof d.subject === 'string' ? d.subject : null;
+      const st =
+        typeof d.status === 'string'
+          ? REQUEST_STATUS_LABELS[d.status as RequestStatus] ??
+            String(d.status)
+          : null;
+      return [subj, st].filter(Boolean).join(' · ') || null;
+    }
+    case 'OTHER':
+      return typeof d.freeText === 'string'
+        ? d.freeText.length > 80
+          ? `${d.freeText.slice(0, 80)}…`
+          : d.freeText
+        : null;
+    default:
+      return null;
+  }
+}
 
 export function ReportsListClient() {
   const [session, setSession] = useState<AdminSessionResponse | null>(null);
@@ -217,6 +272,9 @@ export function ReportsListClient() {
                     </span>
                     <h3 className={styles.itemTitle}>{report.title}</h3>
                   </div>
+                  {describeReport(report) && (
+                    <p className={styles.itemSummary}>{describeReport(report)}</p>
+                  )}
 
                   <dl className={styles.itemMeta}>
                     {report.church && (

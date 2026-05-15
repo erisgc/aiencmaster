@@ -9,6 +9,7 @@ import {
   previewInvitation,
   type InvitationPreview,
 } from '@/app/lib/admin-invitations';
+import { useIsMobileDevice } from '@/app/lib/useIsMobileDevice';
 import styles from '../../auth.module.css';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 
 export function AcceptInviteClient({ token }: Props) {
   const router = useRouter();
+  const { isMobile, ready: mobileReady } = useIsMobileDevice();
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
@@ -25,7 +27,19 @@ export function AcceptInviteClient({ token }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Si el invitado abre el link en un phone, no puede registrar la cuenta
+  // desde el web — debe descargar la app. Preservamos el token en query
+  // string para que la landing pueda mostrarlo y permitir deep-link.
   useEffect(() => {
+    if (!mobileReady || !isMobile) return;
+    router.replace(
+      `/admin/mobile-required?token=${encodeURIComponent(token)}`,
+    );
+  }, [mobileReady, isMobile, router, token]);
+
+  useEffect(() => {
+    if (!mobileReady) return; // espera detección antes de pedir preview
+    if (isMobile) return; // vamos a redirigir, no llamamos al backend
     let mounted = true;
     void previewInvitation(token)
       .then((data) => {
@@ -42,7 +56,7 @@ export function AcceptInviteClient({ token }: Props) {
     return () => {
       mounted = false;
     };
-  }, [token]);
+  }, [token, mobileReady, isMobile]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

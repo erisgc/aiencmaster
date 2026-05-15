@@ -1,11 +1,20 @@
 import {
+  ArrayUnique,
+  IsArray,
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
   MaxLength,
   MinLength,
 } from "class-validator";
+
+import {
+  ChurchPermission,
+  GlobalPermission,
+} from "../permissions/permission.enums";
 
 export class CreateInvitationDto {
   @IsString()
@@ -25,4 +34,21 @@ export class CreateInvitationDto {
 
   @IsUUID("4")
   assignedChurchId!: string;
+
+  /**
+   * Permisos pre-asignados sobre la iglesia (opcional). Si no se envía,
+   * se aplican todos los permisos de iglesia por defecto.
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsEnum(ChurchPermission, { each: true })
+  churchPermissions?: ChurchPermission[];
+
+  /** Permisos globales pre-asignados (opcional, raramente usados). */
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsEnum(GlobalPermission, { each: true })
+  globalPermissions?: GlobalPermission[];
 }

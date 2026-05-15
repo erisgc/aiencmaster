@@ -5,14 +5,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { adminGetChurches, type Church } from '@/app/lib/admin-churches';
 import {
   REPORT_TYPE_LABELS,
+  EXPENSE_CATEGORY_LABELS,
+  REQUEST_STATUS_LABELS,
   type ReportType,
   type ReportSummary,
   type CreateReportPayload,
+  type ExpenseCategory,
+  type RequestStatus,
+  type AttendanceScope,
 } from '@/app/lib/admin-reports';
 import {
   adminGetSession,
   type AdminSessionResponse,
 } from '@/app/lib/admin-auth';
+import { useActiveChurch } from '../_components/ActiveChurchContext';
 
 import styles from './page.module.css';
 
@@ -21,7 +27,24 @@ const REPORT_TYPES: ReportType[] = [
   'ATTENDANCE',
   'EXPENSES',
   'EVENT',
+  'REQUEST',
   'OTHER',
+];
+
+const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  'PURCHASE',
+  'REPAIR',
+  'DAMAGE',
+  'THEFT',
+  'UTILITIES',
+  'OTHER',
+];
+
+const REQUEST_STATUSES: RequestStatus[] = [
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'RESOLVED',
 ];
 
 interface Props {
@@ -35,6 +58,11 @@ interface Props {
 /**
  * Formulario reutilizable para crear o editar un informe.
  * Renderiza campos específicos según `reportType`.
+ *
+ * Soporta los tipos extendidos:
+ *   - EXPENSES con discriminador `data.category` (compras, robos, daños, etc.)
+ *   - ATTENDANCE con `data.scope` (session/month) y `sessionDate` cuando aplica
+ *   - REQUEST con `subject`, `status` y `body` para peticiones formales a ROOT
  */
 export function ReportForm({
   initial,
@@ -45,6 +73,7 @@ export function ReportForm({
 }: Props) {
   const [session, setSession] = useState<AdminSessionResponse | null>(null);
   const [churches, setChurches] = useState<Church[]>([]);
+  const { activeChurchId, assignments, isRoot: ctxIsRoot } = useActiveChurch();
 
   const [reportType, setReportType] = useState<ReportType>(
     initial?.reportType ?? 'OFFERINGS',
@@ -59,14 +88,34 @@ export function ReportForm({
     initial ? toDateInput(initial.periodEnd) : '',
   );
 
-  // Tipo-específicos
+  // Datos específicos por tipo
   const initialData = (initial?.data ?? {}) as Record<string, unknown>;
+
   const [totalCop, setTotalCop] = useState<string>(
     initialData.totalCop != null ? String(initialData.totalCop) : '',
+  );
+  const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>(
+    typeof initialData.category === 'string' &&
+      EXPENSE_CATEGORIES.includes(initialData.category as ExpenseCategory)
+      ? (initialData.category as ExpenseCategory)
+      : 'PURCHASE',
+  );
+  const [expenseDesc, setExpenseDesc] = useState<string>(
+    typeof initialData.description === 'string' ? initialData.description : '',
+  );
+
+  const [attendanceScope, setAttendanceScope] = useState<AttendanceScope>(
+    initialData.scope === 'session' ? 'session' : 'month',
+  );
+  const [sessionDate, setSessionDate] = useState<string>(
+    typeof initialData.sessionDate === 'string'
+      ? toDateInput(initialData.sessionDate)
+      : '',
   );
   const [count, setCount] = useState<string>(
     initialData.count != null ? String(initialData.count) : '',
   );
+
   const [eventName, setEventName] = useState<string>(
     typeof initialData.name === 'string' ? initialData.name : '',
   );
@@ -76,6 +125,20 @@ export function ReportForm({
   const [eventSummary, setEventSummary] = useState<string>(
     typeof initialData.summary === 'string' ? initialData.summary : '',
   );
+
+  const [requestSubject, setRequestSubject] = useState<string>(
+    typeof initialData.subject === 'string' ? initialData.subject : '',
+  );
+  const [requestStatus, setRequestStatus] = useState<RequestStatus>(
+    typeof initialData.status === 'string' &&
+      REQUEST_STATUSES.includes(initialData.status as RequestStatus)
+      ? (initialData.status as RequestStatus)
+      : 'PENDING',
+  );
+  const [requestBody, setRequestBody] = useState<string>(
+    typeof initialData.body === 'string' ? initialData.body : '',
+  );
+
   const [freeText, setFreeText] = useState<string>(
     typeof initialData.freeText === 'string' ? initialData.freeText : '',
   );
@@ -88,7 +151,7 @@ export function ReportForm({
       .catch(() => null);
   }, []);
 
-  // Cargar iglesias (solo para ROOT, los admins tienen una asignada).
+  // Cargar iglesias para ROOT.
   useEffect(() => {
     if (session?.account?.role !== 'ROOT') return;
     void adminGetChurches()
@@ -96,44 +159,73 @@ export function ReportForm({
       .catch(() => setChurches([]));
   }, [session]);
 
-  // Preseleccionar la iglesia asignada al admin cuando llegue la sesión.
-  // El bail-out garantiza que setState sólo se llame cuando hay un cambio real.
-  const preselectChurchId =
-    session?.account?.role === 'ADMIN' &&
-    session.account &&
-    'assignedChurchId' in session.account
-      ? (session.account as unknown as { assignedChurchId: string | null })
-          .assignedChurchId
-      : null;
+  const isRoot = session?.account?.role === 'ROOT' || ctxIsRoot;
 
+  // Preseleccionar la iglesia activa del context cuando llegue la sesión
+  // (multi-iglesia: usa el selector global del sidebar).
   useEffect(() => {
-    if (preselectChurchId && !churchId) {
+    if (!churchId && !isRoot && activeChurchId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChurchId(preselectChurchId);
+      setChurchId(activeChurchId);
     }
-  }, [preselectChurchId, churchId]);
-
-  const isRoot = session?.account?.role === 'ROOT';
+  }, [activeChurchId, churchId, isRoot]);
 
   const data = useMemo(() => {
     switch (reportType) {
       case 'OFFERINGS':
-      case 'EXPENSES':
         return { totalCop: Number(totalCop) };
+      case 'EXPENSES':
+        return {
+          totalCop: Number(totalCop),
+          category: expenseCategory,
+          description: expenseDesc.trim() || undefined,
+        };
       case 'ATTENDANCE':
-        return { count: Number(count) };
+        return attendanceScope === 'session'
+          ? {
+              scope: 'session' as const,
+              count: Number(count),
+              sessionDate: sessionDate
+                ? new Date(sessionDate).toISOString()
+                : undefined,
+            }
+          : {
+              scope: 'month' as const,
+              count: Number(count),
+            };
       case 'EVENT':
         return {
           name: eventName,
           attendees: attendees ? Number(attendees) : undefined,
           summary: eventSummary || undefined,
         };
+      case 'REQUEST':
+        return {
+          subject: requestSubject.trim(),
+          status: requestStatus,
+          body: requestBody.trim() || undefined,
+        };
       case 'OTHER':
         return { freeText };
       default:
         return {};
     }
-  }, [reportType, totalCop, count, eventName, attendees, eventSummary, freeText]);
+  }, [
+    reportType,
+    totalCop,
+    expenseCategory,
+    expenseDesc,
+    attendanceScope,
+    sessionDate,
+    count,
+    eventName,
+    attendees,
+    eventSummary,
+    requestSubject,
+    requestStatus,
+    requestBody,
+    freeText,
+  ]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,12 +255,29 @@ export function ReportForm({
       setFormError('Ingresa un monto válido (mayor o igual a 0).');
       return;
     }
-    if (reportType === 'ATTENDANCE' && (!Number.isInteger(Number(count)) || Number(count) < 0)) {
+    if (
+      reportType === 'ATTENDANCE' &&
+      (!Number.isInteger(Number(count)) || Number(count) < 0)
+    ) {
       setFormError('Ingresa un número entero de asistentes (>= 0).');
+      return;
+    }
+    if (
+      reportType === 'ATTENDANCE' &&
+      attendanceScope === 'session' &&
+      !sessionDate
+    ) {
+      setFormError(
+        'Indica la fecha del culto / sesión cuando reportas asistencia por culto.',
+      );
       return;
     }
     if (reportType === 'EVENT' && !eventName.trim()) {
       setFormError('El nombre del evento es obligatorio.');
+      return;
+    }
+    if (reportType === 'REQUEST' && requestSubject.trim().length < 3) {
+      setFormError('El asunto de la solicitud es obligatorio (mínimo 3 caracteres).');
       return;
     }
 
@@ -182,6 +291,21 @@ export function ReportForm({
       data: data as Record<string, unknown>,
     });
   }
+
+  // Lista de iglesias seleccionables: para ROOT todas; para admin, sus
+  // asignaciones (multi-iglesia).
+  const selectableChurches = useMemo(() => {
+    if (isRoot) {
+      return churches.map((c) => ({
+        id: c.id,
+        label: `${c.name} — ${c.city}`,
+      }));
+    }
+    return assignments.map((a) => ({
+      id: a.churchId,
+      label: a.churchName ?? a.churchId,
+    }));
+  }, [isRoot, churches, assignments]);
 
   return (
     <form className={styles.formCard} onSubmit={handleSubmit}>
@@ -198,26 +322,38 @@ export function ReportForm({
               </option>
             ))}
           </select>
+          <span className={styles.hint}>
+            {reportType === 'REQUEST'
+              ? 'La solicitud queda visible para ROOT para que la apruebe o rechace.'
+              : reportType === 'EXPENSES'
+                ? 'Usa categoría para diferenciar compras, daños, robos o servicios.'
+                : reportType === 'ATTENDANCE'
+                  ? 'Puedes registrar la asistencia de un culto puntual o un acumulado mensual.'
+                  : ' '}
+          </span>
         </div>
 
         <div className={styles.field}>
           <label>Iglesia</label>
-          {isRoot ? (
+          {selectableChurches.length > 1 || isRoot ? (
             <select
               value={churchId}
               onChange={(e) => setChurchId(e.target.value)}
               required
             >
               <option value="">Selecciona…</option>
-              {churches.map((c) => (
+              {selectableChurches.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.city}
+                  {c.label}
                 </option>
               ))}
             </select>
           ) : (
             <input
-              value={churchId ? 'Iglesia asignada' : 'Sin iglesia asignada'}
+              value={
+                selectableChurches[0]?.label ??
+                (churchId ? 'Iglesia asignada' : 'Sin iglesia asignada')
+              }
               readOnly
               disabled
             />
@@ -263,13 +399,9 @@ export function ReportForm({
       <div className={styles.typeSection}>
         <h3 className={styles.typeTitle}>Datos del informe</h3>
 
-        {(reportType === 'OFFERINGS' || reportType === 'EXPENSES') && (
+        {reportType === 'OFFERINGS' && (
           <div className={styles.field}>
-            <label>
-              {reportType === 'OFFERINGS'
-                ? 'Total de ofrendas (COP)'
-                : 'Total de egresos (COP)'}
-            </label>
+            <label>Total de ofrendas (COP)</label>
             <input
               type="number"
               min="0"
@@ -281,18 +413,93 @@ export function ReportForm({
           </div>
         )}
 
+        {reportType === 'EXPENSES' && (
+          <>
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                <label>Total del gasto (COP)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={totalCop}
+                  onChange={(e) => setTotalCop(e.target.value)}
+                  required
+                />
+              </div>
+              <div className={styles.field}>
+                <label>Categoría</label>
+                <select
+                  value={expenseCategory}
+                  onChange={(e) =>
+                    setExpenseCategory(e.target.value as ExpenseCategory)
+                  }
+                >
+                  {EXPENSE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {EXPENSE_CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label>Descripción breve (opcional)</label>
+              <span className={styles.hint}>
+                Cuenta qué se compró, qué se reparó o qué pasó. Máx 2000 caracteres.
+              </span>
+              <textarea
+                rows={3}
+                value={expenseDesc}
+                onChange={(e) => setExpenseDesc(e.target.value)}
+                maxLength={2000}
+              />
+            </div>
+          </>
+        )}
+
         {reportType === 'ATTENDANCE' && (
-          <div className={styles.field}>
-            <label>Número de asistentes</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={count}
-              onChange={(e) => setCount(e.target.value)}
-              required
-            />
-          </div>
+          <>
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                <label>Alcance</label>
+                <select
+                  value={attendanceScope}
+                  onChange={(e) =>
+                    setAttendanceScope(e.target.value as AttendanceScope)
+                  }
+                >
+                  <option value="month">Acumulado mensual</option>
+                  <option value="session">Culto / sesión específica</option>
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label>Número de asistentes</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={count}
+                  onChange={(e) => setCount(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            {attendanceScope === 'session' && (
+              <div className={styles.field}>
+                <label>Fecha del culto / sesión</label>
+                <span className={styles.hint}>
+                  Útil para distinguir culto dominical, juventud, oración, etc.
+                </span>
+                <input
+                  type="date"
+                  value={sessionDate}
+                  onChange={(e) => setSessionDate(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+          </>
         )}
 
         {reportType === 'EVENT' && (
@@ -323,6 +530,56 @@ export function ReportForm({
                 value={eventSummary}
                 onChange={(e) => setEventSummary(e.target.value)}
                 maxLength={2000}
+              />
+            </div>
+          </>
+        )}
+
+        {reportType === 'REQUEST' && (
+          <>
+            <div className={styles.field}>
+              <label>Asunto de la solicitud</label>
+              <span className={styles.hint}>
+                Resumen claro de lo que estás pidiendo a la oficina nacional
+                (ej. &laquo;Apoyo para reparación de cubierta&raquo;).
+              </span>
+              <input
+                value={requestSubject}
+                onChange={(e) => setRequestSubject(e.target.value)}
+                maxLength={180}
+                required
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Estado</label>
+              <span className={styles.hint}>
+                Inicialmente queda en &laquo;Pendiente&raquo;. ROOT podrá
+                cambiarlo a aprobada, rechazada o resuelta.
+              </span>
+              <select
+                value={requestStatus}
+                onChange={(e) =>
+                  setRequestStatus(e.target.value as RequestStatus)
+                }
+                disabled={!isRoot && Boolean(initial)}
+              >
+                {REQUEST_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {REQUEST_STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label>Detalle de la solicitud</label>
+              <span className={styles.hint}>
+                Explica con todo el contexto necesario. Máx 4000 caracteres.
+              </span>
+              <textarea
+                rows={5}
+                value={requestBody}
+                onChange={(e) => setRequestBody(e.target.value)}
+                maxLength={4000}
               />
             </div>
           </>

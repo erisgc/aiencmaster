@@ -1,0 +1,238 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  max-width: 70ch;
+  line-height: 1.55;
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 160px;
+}
+
+.filterGroup label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.filterGroup input,
+.filterGroup select {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.errorBanner {
+  padding: 0.85rem 1.1rem;
+  border-radius: 14px;
+  background: var(--danger-weak);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  font-size: 0.85rem;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.kpi {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 18px;
+  padding: 1px;
+  background: var(--kpiBorder, linear-gradient(135deg, var(--gem-sapphire), var(--gem-emerald)));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.kpiLabel {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.kpiValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.kpiSub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.kpi_offerings {
+  --kpiBorder: linear-gradient(135deg, var(--gem-emerald), var(--gem-sapphire));
+}
+.kpi_expenses {
+  --kpiBorder: linear-gradient(135deg, var(--danger, #d14b4b), var(--gem-topaz));
+}
+.kpi_attendance {
+  --kpiBorder: linear-gradient(135deg, var(--gem-sapphire), var(--gem-amethyst, #7d4cdb));
+}
+.kpi_net {
+  --kpiBorder: linear-gradient(135deg, var(--gem-topaz), var(--gem-emerald));
+}
+
+.chartCard {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.chartHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.chartTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.legend {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legendSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.swatch_offerings {
+  background: var(--gem-emerald);
+}
+.swatch_expenses {
+  background: var(--danger, #d14b4b);
+}
+.swatch_attendance {
+  background: var(--gem-sapphire);
+}
+
+.chartWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart {
+  width: 100%;
+  height: 260px;
+  display: block;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+.byChurchTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.byChurchTable th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.byChurchTable td {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+}
+
+.byChurchTable td.num,
+.byChurchTable th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

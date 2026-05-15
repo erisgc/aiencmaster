@@ -2,6 +2,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { getPublicChurchById } from '@/app/lib/churches';
+import {
+  getPublicChurchAnnouncements,
+  type ChurchAnnouncementSummary,
+} from '@/app/lib/admin-church-announcements';
 import styles from './page.module.css';
 
 type ChurchPageProps = {
@@ -20,15 +24,34 @@ async function loadChurch(id: string) {
   }
 }
 
+async function safeLoadAnnouncements(
+  id: string,
+): Promise<ChurchAnnouncementSummary[]> {
+  try {
+    return await getPublicChurchAnnouncements(id);
+  } catch {
+    return [];
+  }
+}
+
 export default async function ChurchDetailPage({ params }: ChurchPageProps) {
   const { id } = await params;
-  const church = await loadChurch(id);
+  const [church, announcements] = await Promise.all([
+    loadChurch(id),
+    safeLoadAnnouncements(id),
+  ]);
 
   const mapsHref =
     church.mapsUrl ??
     (church.mapsLat != null && church.mapsLng != null
       ? `https://www.google.com/maps?q=${church.mapsLat},${church.mapsLng}`
       : null);
+
+  const dateFormatter = new Intl.DateTimeFormat('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   return (
     <main className={styles.page}>
@@ -157,6 +180,54 @@ export default async function ChurchDetailPage({ params }: ChurchPageProps) {
             )}
           </section>
         </div>
+
+        {announcements.length > 0 && (
+          <section className={styles.announcementsSection}>
+            <header className={styles.announcementsHead}>
+              <h2 className={styles.cardTitle}>Anuncios de la iglesia</h2>
+              <span className={styles.announcementsCount}>
+                {announcements.length}{' '}
+                {announcements.length === 1 ? 'publicación' : 'publicaciones'}
+              </span>
+            </header>
+
+            <ul className={styles.announcementsList}>
+              {announcements.map((a) => (
+                <li
+                  key={a.id}
+                  id={`anuncio-${a.id}`}
+                  className={styles.announcementCard}
+                >
+                  <div className={styles.announcementMeta}>
+                    <span className={styles.announcementAuthor}>
+                      {a.author}
+                    </span>
+                    <span className={styles.announcementDate}>
+                      {dateFormatter.format(new Date(a.createdAt))}
+                    </span>
+                  </div>
+                  <h3 className={styles.announcementTitle}>{a.title}</h3>
+                  <p className={styles.announcementDesc}>{a.description}</p>
+                  {a.attachments && a.attachments.length > 0 && (
+                    <div className={styles.announcementAttachments}>
+                      {a.attachments.map((att) => (
+                        <a
+                          key={att.id}
+                          href={att.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.announcementAttachLink}
+                        >
+                          📎 {att.name || att.format.toUpperCase()}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {church.directors && church.directors.length > 0 && (
           <section className={styles.directorsSection}>

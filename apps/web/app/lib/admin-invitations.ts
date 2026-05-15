@@ -1,4 +1,8 @@
 import { API_BASE_URL } from './api';
+import type {
+  ChurchPermission,
+  GlobalPermission,
+} from './admin-permissions';
 
 export type AdminInvitationStatus =
   | 'PENDING'
@@ -105,6 +109,8 @@ export function adminCreateInvitation(payload: {
   username: string;
   displayName: string;
   assignedChurchId: string;
+  churchPermissions?: ChurchPermission[];
+  globalPermissions?: GlobalPermission[];
 }) {
   return invitationsRequest<AdminInvitationCreated>(
     '/admin/security/invitations',

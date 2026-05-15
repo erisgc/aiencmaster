@@ -11,11 +11,17 @@ import { Repository } from "typeorm";
 
 import { Church } from "../churches/church.entity";
 import { AdminAccount } from "./admin-account.entity";
+import { AdminChurchAssignment } from "./admin-church-assignment.entity";
 import {
   AdminInvitation,
   AdminInvitationStatus,
 } from "./admin-invitation.entity";
 import { AdminRole } from "./enums/admin-role.enum";
+import {
+  ALL_CHURCH_PERMISSIONS,
+  ChurchPermission,
+  GlobalPermission,
+} from "./permissions/permission.enums";
 
 const INVITATION_TTL_HOURS = 72;
 const TOKEN_BYTES = 32;
@@ -33,6 +39,10 @@ export interface CreateInvitationInput {
   displayName: string;
   assignedChurchId: string;
   createdByAdminAccountId: string;
+  /** Permisos pre-asignados sobre la iglesia. Si no se envía, se usan todos. */
+  churchPermissions?: ChurchPermission[];
+  /** Permisos globales pre-asignados (opcional). */
+  globalPermissions?: GlobalPermission[];
 }
 
 export interface InvitationWithToken {
@@ -53,6 +63,8 @@ export class AdminInvitationsService {
     private readonly accountRepo: Repository<AdminAccount>,
     @InjectRepository(Church)
     private readonly churchRepo: Repository<Church>,
+    @InjectRepository(AdminChurchAssignment)
+    private readonly assignmentRepo: Repository<AdminChurchAssignment>,
   ) {}
 
   async create(input: CreateInvitationInput): Promise<InvitationWithToken> {
@@ -109,6 +121,9 @@ export class AdminInvitationsService {
       username: usernameNorm,
       displayName,
       assignedChurchId: input.assignedChurchId,
+      churchPermissions:
+        input.churchPermissions ?? [...ALL_CHURCH_PERMISSIONS],
+      globalPermissions: input.globalPermissions ?? [],
       createdByAdminAccountId: input.createdByAdminAccountId,
       status: AdminInvitationStatus.PENDING,
       expiresAt,
@@ -241,8 +256,22 @@ export class AdminInvitationsService {
       isActive: true,
       tokenVersion: 1,
       assignedChurchId: invitation.assignedChurchId,
+      // Aplicamos permisos globales pre-asignados (puede estar vacío).
+      globalPermissions: invitation.globalPermissions ?? [],
     });
     const saved = await this.accountRepo.save(account);
+
+    // Crear la asignación admin↔iglesia con los permisos del template.
+    await this.assignmentRepo.save(
+      this.assignmentRepo.create({
+        adminAccountId: saved.id,
+        churchId: invitation.assignedChurchId,
+        permissions:
+          invitation.churchPermissions && invitation.churchPermissions.length > 0
+            ? invitation.churchPermissions
+            : [...ALL_CHURCH_PERMISSIONS],
+      }),
+    );
 
     invitation.status = AdminInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
