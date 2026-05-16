@@ -67,6 +67,16 @@ export function ActiveChurchProvider({
 
   // Inicialización: usar lo que esté en localStorage si pertenece a las
   // asignaciones del admin; si no, escoger la primera asignación.
+  //
+  // Este efecto sincroniza state local con dos fuentes externas:
+  //   - la sesión async (`isLoaded`, `isRoot`, `assignments`)
+  //   - `localStorage` (sólo disponible en cliente)
+  //
+  // No podemos derivar este valor durante el render porque `localStorage`
+  // no existe en SSR; eso causaría mismatch de hidratación. Cada setState
+  // dentro del efecto está justificado y no produce cascade-render real
+  // (depende sólo de inputs que cambian fuera de React).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isLoaded) return;
     if (isRoot) {
@@ -95,6 +105,7 @@ export function ActiveChurchProvider({
       window.localStorage.setItem(LS_KEY, valid);
     }
   }, [isLoaded, isRoot, assignments]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setActiveChurchId = useCallback((id: string | null) => {
     setActiveChurchIdState(id);
