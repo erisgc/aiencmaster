@@ -5,6 +5,21 @@
 # los plugins terceros usan vía reflection y que el shrinker podría
 # eliminar por accidente.
 
+# ── Google Play Core (Flutter referencia estas clases para "deferred
+# components" / "split installs" cuando publicas en Play Store). Nosotros
+# distribuimos APK directo via GitHub Releases — NUNCA usamos esas
+# features, pero las referencias quedan en el código del engine y R8
+# falla al no encontrarlas. Las marcamos como "don't warn" para que el
+# minify pase. ──
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+# Y mantenemos las clases del engine que las referencian (por si Flutter
+# las llama vía reflection):
+-keep class io.flutter.embedding.android.FlutterPlayStoreSplitApplication { *; }
+-keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
+
 # ── Plugins Flutter ──
 -keep class io.flutter.embedding.** { *; }
 -keep class io.flutter.plugin.** { *; }
