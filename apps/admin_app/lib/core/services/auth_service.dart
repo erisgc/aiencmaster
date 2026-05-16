@@ -10,7 +10,7 @@ class AuthService {
   final DeviceIdentityService _device;
 
   Future<SessionResponse> getSession() async {
-    final res = await _api.dio.get('/admin/session');
+    final res = await _api.dio.get('/admin/auth/session');
     if (res.statusCode == 200) {
       return SessionResponse.fromJson(res.data as Map<String, dynamic>);
     }
