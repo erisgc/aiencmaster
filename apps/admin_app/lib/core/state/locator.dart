@@ -1,6 +1,7 @@
 import '../api/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/data_services.dart';
+import '../services/device_identity_service.dart';
 import '../services/local_auth_service.dart';
 import 'auth_state.dart';
 
@@ -9,6 +10,7 @@ class Locator {
   Locator._();
 
   static late final AuthService auth;
+  static late final DeviceIdentityService device;
   static late final LocalAuthService localAuth;
   static late final ChurchService churches;
   static late final AnnouncementService announcements;
@@ -19,7 +21,8 @@ class Locator {
 
   static Future<void> init() async {
     await ApiClient.init();
-    auth = AuthService(ApiClient.I);
+    device = DeviceIdentityService();
+    auth = AuthService(ApiClient.I, device);
     localAuth = LocalAuthService();
     churches = ChurchService(ApiClient.I);
     announcements = AnnouncementService(ApiClient.I);

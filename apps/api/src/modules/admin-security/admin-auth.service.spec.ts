@@ -352,6 +352,163 @@ describe('AdminAuthService', () => {
     );
   });
 
+  /**
+   * Escenario E2E del bug reportado en la version anterior:
+   *
+   *   "no dejaba acceder al admin aunque se intentara loguear desde
+   *    el mismo dispositivo que se registro (todo correcto)"
+   *
+   * Comprueba la secuencia completa sobre el mock:
+   *
+   *   1. Admin se loguea por primera vez desde dispositivo X (deviceId=ABC).
+   *      Backend crea device pending + access request pending → PENDING.
+   *   2. ROOT aprueba el access request → device pasa a APPROVED.
+   *   3. Admin reintenta login con MISMO deviceId=ABC.
+   *      Backend ve device APPROVED + adminAccountId match → ACTIVE.
+   *
+   * El bug habria sido: en (3) el backend NO encuentra al device o lo crea
+   * de cero (porque deviceId rota cliente-side), generando otro PENDING
+   * request en bucle. El test fija el comportamiento esperado.
+   */
+  it('re-login con el MISMO deviceId después de aprobación da ACTIVE (no nuevo PENDING)', async () => {
+    const account = {
+      id: 'admin-1',
+      username: 'pastor.juan',
+      passwordHash: 'hash',
+      displayName: 'Pastor Juan',
+      role: AdminRole.ADMIN,
+      isActive: true,
+      tokenVersion: 1,
+    };
+
+    // Estado del device DESPUÉS de la aprobación del ROOT (paso 2 del
+    // escenario). El test simula el paso 3: el admin reintenta login
+    // con el mismo deviceId.
+    const approvedDevice = {
+      id: 'device-row',
+      deviceId: 'stable-device-abc',
+      adminAccountId: 'admin-1',
+      status: AdminDeviceStatus.APPROVED,
+      roleScope: AdminDeviceScope.APPROVED_DEVICE,
+      deviceName: 'Pixel 7 del Pastor Juan',
+      platform: 'Android',
+      browser: 'AIENC Admin app',
+    };
+
+    accountRepo.findOne.mockResolvedValue(account);
+    sessionService.verifyPassword.mockResolvedValue(true);
+    deviceRepo.findOne.mockResolvedValue(approvedDevice);
+    accountRepo.save.mockResolvedValue({
+      ...account,
+      lastLoginAt: new Date(),
+    });
+
+    const result = await service.login(
+      {
+        username: 'pastor.juan',
+        password: 'una-contrasena-larga',
+        // ← MISMO deviceId que se uso al registrar
+        deviceId: 'stable-device-abc',
+        deviceName: 'Pixel 7 del Pastor Juan',
+        platform: 'Android',
+        browser: 'AIENC Admin app',
+      },
+      { headers: {} } as never,
+      {} as never,
+    );
+
+    expect(result.status).toBe('ACTIVE');
+    expect(sessionService.issueActiveSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'admin-1' }),
+      expect.objectContaining({
+        deviceId: 'stable-device-abc',
+        status: AdminDeviceStatus.APPROVED,
+      }),
+    );
+    // NO se debe crear un access request nuevo.
+    expect(accessRequestRepo.save).not.toHaveBeenCalled();
+    // Audita login exitoso, no pending.
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({ actionType: 'LOGIN_SUCCEEDED' }),
+    );
+    // El device se actualiza con metadatos frescos del login (lastSeenAt, ip).
+    expect(deviceRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deviceId: 'stable-device-abc',
+        status: AdminDeviceStatus.APPROVED,
+      }),
+    );
+  });
+
+  /**
+   * Variante del caso anterior: el admin reintenta login mientras su access
+   * request sigue PENDING (el ROOT no aprobó todavía). El backend NO debe
+   * crear otro request nuevo — debe devolver el mismo PENDING para que
+   * el admin vea su solicitud en curso.
+   */
+  it('re-login con MISMO deviceId mientras está PENDING reutiliza el access request existente', async () => {
+    const account = {
+      id: 'admin-1',
+      username: 'pastor.luis',
+      passwordHash: 'hash',
+      displayName: 'Pastor Luis',
+      role: AdminRole.ADMIN,
+      isActive: true,
+      tokenVersion: 1,
+    };
+
+    const pendingDevice = {
+      id: 'device-row',
+      deviceId: 'stable-device-xyz',
+      adminAccountId: 'admin-1',
+      status: AdminDeviceStatus.PENDING,
+      roleScope: AdminDeviceScope.APPROVED_DEVICE,
+      deviceName: 'Samsung A52',
+      platform: 'Android',
+      browser: 'AIENC Admin app',
+    };
+
+    const existingPendingRequest = {
+      id: 'access-request-1',
+      adminAccountId: 'admin-1',
+      deviceId: 'stable-device-xyz',
+      status: AdminAccessRequestStatus.PENDING,
+      requestedAt: new Date(),
+      resolvedAt: null,
+    };
+
+    accountRepo.findOne.mockResolvedValue(account);
+    sessionService.verifyPassword.mockResolvedValue(true);
+    deviceRepo.findOne.mockResolvedValue(pendingDevice);
+    accessRequestRepo.findOne
+      .mockResolvedValueOnce(existingPendingRequest) // findLatest (devuelve PENDING)
+      .mockResolvedValueOnce(existingPendingRequest); // findPending
+
+    const result = await service.login(
+      {
+        username: 'pastor.luis',
+        password: 'una-contrasena-larga',
+        deviceId: 'stable-device-xyz',
+        deviceName: 'Samsung A52',
+        platform: 'Android',
+        browser: 'AIENC Admin app',
+      },
+      { headers: {} } as never,
+      {} as never,
+    );
+
+    expect(result.status).toBe('PENDING');
+    // NO se debe crear otro access request.
+    expect(accessRequestRepo.save).not.toHaveBeenCalled();
+    // Sí debe emitir la cookie de pending session reusando el request existente.
+    expect(sessionService.issuePendingSession).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'admin-1' }),
+      expect.objectContaining({ id: 'access-request-1' }),
+    );
+  });
+
   it('blocks logins that try to reuse a deviceId already linked to another account', async () => {
     accountRepo.findOne.mockResolvedValue({
       id: 'admin-1',

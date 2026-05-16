@@ -11,15 +11,68 @@ function randomDeviceId() {
 }
 
 function persistDeviceId(deviceId: string) {
-  localStorage.setItem(ADMIN_DEVICE_STORAGE_KEY, deviceId);
+  try {
+    localStorage.setItem(ADMIN_DEVICE_STORAGE_KEY, deviceId);
+  } catch {
+    // localStorage puede estar bloqueado (modo privado estricto, configuración
+    // del navegador). No es crítico — la cookie sobrevive a esto.
+  }
   document.cookie = `${ADMIN_DEVICE_COOKIE}=${deviceId}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
 }
 
+/**
+ * Lee el deviceId persistido en `document.cookie`. Usado como fallback
+ * cuando `localStorage` se ha borrado o está bloqueado (modo privado,
+ * limpieza del navegador, cambio de perfil dentro del mismo browser).
+ *
+ * Sin este fallback, cada vez que el usuario perdía el localStorage se
+ * generaba un deviceId NUEVO y el backend lo veía como un dispositivo
+ * diferente, exigiendo aprobación del ROOT otra vez. Ese era el "bloqueante
+ * misterioso" reportado en la versión anterior.
+ */
+function readDeviceIdCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const prefix = `${ADMIN_DEVICE_COOKIE}=`;
+  for (const part of document.cookie.split(';')) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) {
+      const value = trimmed.substring(prefix.length).trim();
+      if (value.length > 0) return value;
+    }
+  }
+  return null;
+}
+
+function readDeviceIdLocalStorage(): string | null {
+  try {
+    return localStorage.getItem(ADMIN_DEVICE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Devuelve el deviceId estable del dispositivo actual. Orden de prioridad:
+ *
+ *   1. localStorage (rápido, persistente en sesión normal)
+ *   2. cookie SameSite=Lax (sobrevive a limpiezas de localStorage y a
+ *      cambios de perfil del mismo browser; el backend también la setea
+ *      en cada respuesta de auth)
+ *   3. nuevo random (sólo si las dos anteriores fallan)
+ *
+ * Tras leer, escribe en ambos para resincronizar.
+ */
 export function ensureAdminDeviceId() {
-  const existing = localStorage.getItem(ADMIN_DEVICE_STORAGE_KEY);
-  if (existing) {
-    persistDeviceId(existing);
-    return existing;
+  const fromStorage = readDeviceIdLocalStorage();
+  if (fromStorage) {
+    persistDeviceId(fromStorage);
+    return fromStorage;
+  }
+
+  const fromCookie = readDeviceIdCookie();
+  if (fromCookie) {
+    persistDeviceId(fromCookie);
+    return fromCookie;
   }
 
   const created = randomDeviceId();
