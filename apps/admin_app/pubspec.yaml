@@ -47,6 +47,23 @@ dependencies:
   # (Flutter 3.41) fuerza esa versión exacta.
   intl: ^0.20.2
 
+  # Selector de imágenes (galería). Lo usamos para logo + portada de iglesia.
+  image_picker: ^1.1.2
+
+  # Selector de archivos (PDFs, imágenes adjuntas a anuncios).
+  file_picker: ^8.1.4
+
+  # Mapa interactivo + tiles OSM (sin API keys ni costos). Usamos flutter_map
+  # 7 que aún es compatible con Flutter 3.41.
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Ubicación actual del dispositivo (botón "Usar mi ubicación").
+  geolocator: ^13.0.2
+
+  # Abrir URLs externas (adjuntos de anuncios, Google Maps).
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

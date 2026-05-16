@@ -458,6 +458,9 @@ class Church {
   final bool isActive;
   final String? mainImageUrl;
   final String? coverImageUrl;
+  final double? mapsLat;
+  final double? mapsLng;
+  final String? mapsUrl;
 
   Church({
     required this.id,
@@ -469,6 +472,9 @@ class Church {
     this.isActive = true,
     this.mainImageUrl,
     this.coverImageUrl,
+    this.mapsLat,
+    this.mapsLng,
+    this.mapsUrl,
   });
 
   factory Church.fromJson(Map<String, dynamic> j) => Church(
@@ -481,6 +487,9 @@ class Church {
         isActive: j['isActive'] as bool? ?? true,
         mainImageUrl: j['mainImageUrl'] as String?,
         coverImageUrl: j['coverImageUrl'] as String?,
+        mapsLat: (j['mapsLat'] as num?)?.toDouble(),
+        mapsLng: (j['mapsLng'] as num?)?.toDouble(),
+        mapsUrl: j['mapsUrl'] as String?,
       );
 }
 

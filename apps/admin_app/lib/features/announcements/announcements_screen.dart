@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
@@ -301,17 +302,34 @@ class _AnnouncementCard extends StatelessWidget {
               runSpacing: 6,
               children: [
                 for (final a in item.attachments)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: GemPalette.emerald.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text(
-                      '📎 ${a.name.isNotEmpty ? a.name : a.format.toUpperCase()}',
-                      style: const TextStyle(
-                          color: GemPalette.emerald, fontSize: 12),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(100),
+                    onTap: () async {
+                      final url = Uri.tryParse(a.url);
+                      if (url == null) return;
+                      if (!await launchUrl(url,
+                          mode: LaunchMode.externalApplication)) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'No se pudo abrir el adjunto.')),
+                          );
+                        }
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: GemPalette.emerald.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Text(
+                        '📎 ${a.name.isNotEmpty ? a.name : a.format.toUpperCase()}',
+                        style: const TextStyle(
+                            color: GemPalette.emerald, fontSize: 12),
+                      ),
                     ),
                   ),
               ],

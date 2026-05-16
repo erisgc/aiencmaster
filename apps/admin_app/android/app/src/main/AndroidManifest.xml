@@ -5,6 +5,10 @@
     <!-- Biometría / pantalla de bloqueo del dispositivo (BiometricPrompt). -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    <!-- Ubicación: sólo para el botón "Usar mi ubicación" al fijar la posición
+         de una iglesia en el mapa. No tracking en background. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:label="AIENC Admin"

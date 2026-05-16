@@ -24,10 +24,12 @@ class ChurchService {
     return Church.fromJson(res.data as Map<String, dynamic>);
   }
 
-  /// El endpoint PATCH de iglesias en el backend procesa `req.parts()`, así
-  /// que aunque no subamos archivos debemos enviar los campos como
-  /// multipart/form-data. La edición de imágenes queda como TODO en mobile:
-  /// se hace desde la web (selector de archivos + cropper).
+  /// El endpoint PATCH de iglesias en el backend procesa `req.parts()` —
+  /// debemos enviar multipart/form-data. Soporta:
+  ///   - Campos de texto (name, city, address, representatives, avgAttendance)
+  ///   - Estado activa (isActive)
+  ///   - Ubicación (mapsLat, mapsLng, mapsUrl) — strings vacíos = quitar
+  ///   - Imágenes (mainImage, coverImage) como MultipartFile
   Future<Church> update(
     String id, {
     String? name,
@@ -36,14 +38,33 @@ class ChurchService {
     String? representatives,
     int? avgAttendance,
     bool? isActive,
+    double? mapsLat,
+    double? mapsLng,
+    String? mapsUrl,
+    bool clearLocation = false,
+    MultipartFile? mainImage,
+    MultipartFile? coverImage,
   }) async {
-    final fields = <String, String>{};
+    final fields = <String, dynamic>{};
     if (name != null) fields['name'] = name.trim();
     if (city != null) fields['city'] = city.trim();
     if (address != null) fields['address'] = address.trim();
     if (representatives != null) fields['representatives'] = representatives.trim();
     if (avgAttendance != null) fields['avgAttendance'] = avgAttendance.toString();
     if (isActive != null) fields['isActive'] = isActive ? 'true' : 'false';
+
+    if (clearLocation) {
+      fields['mapsLat'] = '';
+      fields['mapsLng'] = '';
+      fields['mapsUrl'] = '';
+    } else if (mapsLat != null && mapsLng != null) {
+      fields['mapsLat'] = mapsLat.toString();
+      fields['mapsLng'] = mapsLng.toString();
+      fields['mapsUrl'] = mapsUrl ?? 'https://www.google.com/maps?q=$mapsLat,$mapsLng';
+    }
+
+    if (mainImage != null) fields['mainImage'] = mainImage;
+    if (coverImage != null) fields['coverImage'] = coverImage;
 
     final form = FormData.fromMap(fields);
     final res = await _api.dio.patch(
@@ -89,18 +110,20 @@ class AnnouncementService {
   }
 
   /// Crear anuncio global (sólo ROOT con MANAGE_GLOBAL_ANNOUNCEMENTS).
-  /// El backend usa multipart/form-data en POST (acepta archivos opcionales);
-  /// desde mobile sólo enviamos campos de texto. Los adjuntos se suben desde
-  /// la web.
+  /// El backend acepta multipart/form-data con campo `attachments` repetido
+  /// (uno por archivo). Si `attachments` viene vacío, se crea sin adjuntos.
   Future<Announcement> createGlobal({
     required String title,
     required String description,
     required String author,
+    List<MultipartFile> attachments = const [],
   }) async {
     final form = FormData.fromMap({
       'title': title.trim(),
       'description': description.trim(),
       'author': author.trim(),
+      if (attachments.isNotEmpty)
+        'attachments': attachments, // dio expande la lista a múltiples partes
     });
     final res = await _api.dio.post(
       '/admin/announcements',
@@ -136,11 +159,13 @@ class AnnouncementService {
     required String title,
     required String description,
     required String author,
+    List<MultipartFile> attachments = const [],
   }) async {
     final form = FormData.fromMap({
       'title': title.trim(),
       'description': description.trim(),
       'author': author.trim(),
+      if (attachments.isNotEmpty) 'attachments': attachments,
     });
     final res = await _api.dio.post(
       '/admin/churches/$churchId/announcements',
