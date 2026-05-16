@@ -22,7 +22,9 @@ export class AdminOriginGuard implements CanActivate {
     }
 
     const allowedOrigins = this.getAllowedOrigins();
-    const origin = this.extractOriginHeader(request.headers.origin);
+    const origin = this.normalizeOrigin(
+      this.extractHeader(request.headers.origin),
+    );
     const referer = this.extractHeader(request.headers.referer);
 
     // Para requests que modifican estado (POST/PUT/PATCH/DELETE)
@@ -71,33 +73,58 @@ export class AdminOriginGuard implements CanActivate {
     const web =
       process.env.WEB_ORIGIN?.trim() || "http://localhost:3000";
     const origins: string[] = [];
-    try {
-      origins.push(new URL(web).origin);
-    } catch {
-      // configuración inválida — fallback al default
-      origins.push("http://localhost:3000");
-    }
+    const webNorm = this.normalizeOrigin(web);
+    if (webNorm !== null) origins.push(webNorm);
+
     const mobile = process.env.MOBILE_APP_ORIGIN?.trim();
     if (mobile && mobile.length > 0) {
-      try {
-        // URL("aiencadmin://app").origin → "aiencadmin://app"
-        origins.push(new URL(mobile).origin);
-      } catch {
-        // ignorar valor mal formado
-      }
+      const mobileNorm = this.normalizeOrigin(mobile);
+      if (mobileNorm !== null) origins.push(mobileNorm);
     }
     return origins;
   }
 
-  private extractOriginHeader(value: unknown) {
-    const header = this.extractHeader(value);
-    if (!header) return null;
+  /**
+   * Normaliza un origin para comparación exacta.
+   *
+   * - Para `http://` y `https://` usamos `URL.origin` (extrae scheme + host +
+   *   port y descarta path/query/fragment).
+   * - Para esquemas custom (como `aiencadmin://app`) la API del WHATWG hace
+   *   `URL.origin === "null"`, lo cual es inseguro porque haría
+   *   indistinguibles `aiencadmin://app` y `evil-app://app` (ambos serían
+   *   `"null"`). En su lugar comparamos el string original normalizado
+   *   (lowercase, sin trailing slash).
+   *
+   * Devuelve `null` si el valor está vacío o no es un origin razonable.
+   */
+  private normalizeOrigin(raw: string | null | undefined): string | null {
+    if (!raw) return null;
+    const value = raw.trim();
+    if (value.length === 0) return null;
 
-    try {
-      return new URL(header).origin;
-    } catch {
-      return null;
+    // Detectar esquema con regex: `<scheme>://`
+    const schemeMatch = value.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+    if (!schemeMatch) return null;
+    const scheme = schemeMatch[1].toLowerCase();
+
+    if (scheme === "http" || scheme === "https") {
+      try {
+        return new URL(value).origin;
+      } catch {
+        return null;
+      }
     }
+
+    // Esquema custom: comparación literal lowercase sin trailing slash ni
+    // path/query/fragment (cortamos en el primer '/' después de '://').
+    const afterScheme = value.substring(scheme.length + 3); // saltar "://"
+    const hostPart = afterScheme
+      .split("/")[0]
+      .split("?")[0]
+      .split("#")[0]
+      .toLowerCase();
+    if (hostPart.length === 0) return null;
+    return `${scheme}://${hostPart}`;
   }
 
   private extractHeader(value: unknown) {
@@ -107,10 +134,7 @@ export class AdminOriginGuard implements CanActivate {
   }
 
   private matchesAllowedOrigin(value: string, allowedOrigin: string) {
-    try {
-      return new URL(value).origin === allowedOrigin;
-    } catch {
-      return false;
-    }
+    const normalized = this.normalizeOrigin(value);
+    return normalized !== null && normalized === allowedOrigin;
   }
 }

@@ -131,39 +131,101 @@ String roleShortLabel(String role) {
 
 /// Traduce los códigos del log de auditoría a una descripción legible.
 /// Los códigos vienen del backend (admin-audit.service.ts) y combinan
-/// objeto + verbo en MAYÚSCULAS_CON_GUIONES.
+/// objeto + verbo en MAYÚSCULAS_CON_GUIONES. Mantén sincronizada con
+/// `apps/web/app/lib/i18n.ts`.
 String actionTypeLabel(String code) {
   switch (code) {
+    // ── Sesión ──
+    case 'LOGIN_SUCCEEDED':
     case 'ADMIN_LOGIN_SUCCESS':
       return 'Inicio de sesión';
+    case 'LOGIN_SUCCEEDED_DEVICE_VERIFICATION_DISABLED':
+      return 'Inicio de sesión (verificación de dispositivo desactivada)';
+    case 'LOGIN_FAILED':
     case 'ADMIN_LOGIN_FAILED':
       return 'Intento de inicio de sesión fallido';
+    case 'LOGIN_BLOCKED_DEVICE_CONFLICT':
+      return 'Inicio de sesión bloqueado (conflicto de dispositivo)';
+    case 'LOGIN_BLOCKED_INACTIVE_ACCOUNT':
+      return 'Inicio de sesión bloqueado (cuenta inactiva)';
+    case 'LOGOUT':
     case 'ADMIN_LOGOUT':
       return 'Cierre de sesión';
+
+    // ── Bootstrap / recuperación ROOT ──
+    case 'ROOT_BOOTSTRAPPED':
+      return 'Cuenta principal inicial creada';
+    case 'ROOT_BOOTSTRAP_FAILED':
+      return 'Intento fallido de bootstrap';
+    case 'ROOT_DEVICE_RECOVERED':
+      return 'Dispositivo principal recuperado';
+    case 'ROOT_RECOVERY_FAILED':
+      return 'Intento fallido de recuperación';
+    case 'ROOT_ACCESS_DENIED_ROLE':
+      return 'Acceso ROOT denegado (rol)';
+    case 'ROOT_ACCESS_DENIED_DEVICE':
+      return 'Acceso ROOT denegado (dispositivo)';
+
+    // ── Invitaciones / cuentas ──
     case 'ADMIN_INVITATION_CREATED':
       return 'Invitación creada';
+    case 'ROOT_INVITATION_CREATED':
+      return 'Invitación ROOT creada';
     case 'ADMIN_INVITATION_REVOKED':
       return 'Invitación revocada';
     case 'ADMIN_INVITATION_ACCEPTED':
       return 'Invitación aceptada';
     case 'ADMIN_ACCOUNT_CREATED':
       return 'Cuenta creada';
+    case 'ROOT_ACCOUNT_CREATED':
+      return 'Cuenta ROOT creada';
     case 'ADMIN_ACCOUNT_DEACTIVATED':
       return 'Cuenta desactivada';
     case 'ADMIN_ACCOUNT_REACTIVATED':
       return 'Cuenta reactivada';
+    case 'ADMIN_PASSWORD_RESET':
+      return 'Contraseña reseteada';
+    case 'ADMIN_PROFILE_PHOTO_UPDATED':
+      return 'Foto de perfil actualizada';
+    case 'ADMIN_PROFILE_PHOTO_REMOVED':
+      return 'Foto de perfil eliminada';
+    case 'ROLE_PROMOTED_TO_ROOT':
+      return 'Cuenta promovida a administrador principal';
+    case 'ROLE_DEMOTED_TO_ADMIN':
+      return 'Cuenta degradada a administrador';
+
+    // ── Permisos ──
     case 'ADMIN_PERMISSIONS_UPDATED':
-      return 'Permisos actualizados';
+    case 'ADMIN_GLOBAL_PERMISSIONS_UPDATED':
+      return 'Permisos globales actualizados';
+    case 'ADMIN_CHURCH_PERMISSIONS_UPDATED':
+      return 'Permisos de iglesia actualizados';
     case 'ADMIN_CHURCH_ASSIGNED':
       return 'Iglesia asignada';
     case 'ADMIN_CHURCH_UNASSIGNED':
       return 'Iglesia removida';
+
+    // ── Solicitudes de acceso ──
+    case 'ACCESS_REQUEST_CREATED':
+      return 'Solicitud de acceso creada';
+    case 'ACCESS_REQUEST_APPROVED':
+      return 'Solicitud de acceso aprobada';
+    case 'ACCESS_REQUEST_REJECTED':
+      return 'Solicitud de acceso rechazada';
+
+    // ── Dispositivos ──
+    case 'DEVICE_REVOKED':
+      return 'Dispositivo revocado';
+
+    // ── Informes ──
     case 'REPORT_CREATED':
       return 'Informe creado';
     case 'REPORT_UPDATED':
       return 'Informe editado';
     case 'REPORT_DELETED':
       return 'Informe eliminado';
+
+    // ── Anuncios ──
     case 'ANNOUNCEMENT_CREATED':
       return 'Anuncio creado';
     case 'ANNOUNCEMENT_UPDATED':
@@ -176,22 +238,48 @@ String actionTypeLabel(String code) {
       return 'Anuncio de iglesia editado';
     case 'CHURCH_ANNOUNCEMENT_DELETED':
       return 'Anuncio de iglesia eliminado';
+
+    // ── Iglesias ──
     case 'CHURCH_CREATED':
       return 'Iglesia creada';
     case 'CHURCH_UPDATED':
       return 'Iglesia editada';
+    case 'CHURCH_DELETED':
+      return 'Iglesia eliminada';
+    case 'CHURCH_TOGGLED':
+      return 'Iglesia activada/desactivada';
     case 'CHURCH_DEACTIVATED':
       return 'Iglesia desactivada';
     case 'CHURCH_REACTIVATED':
       return 'Iglesia reactivada';
+
+    // ── Directores ──
+    case 'CHURCH_DIRECTOR_CREATED':
     case 'DIRECTOR_CREATED':
       return 'Director añadido';
+    case 'CHURCH_DIRECTOR_UPDATED':
     case 'DIRECTOR_UPDATED':
       return 'Director editado';
+    case 'CHURCH_DIRECTOR_DELETED':
     case 'DIRECTOR_DELETED':
       return 'Director eliminado';
+
+    // ── Sitio / configuración pública ──
+    case 'SITE_SETTINGS_UPDATED':
+      return 'Configuración del sitio actualizada';
+    case 'SITE_BACKGROUND_CREATED':
+      return 'Imagen de fondo añadida';
+    case 'SITE_BACKGROUND_UPDATED':
+      return 'Imagen de fondo editada';
+    case 'SITE_BACKGROUND_DELETED':
+      return 'Imagen de fondo eliminada';
+    case 'SITE_BACKGROUND_REORDERED':
+      return 'Fondos reordenados';
+
+    // ── Seguridad ──
     case 'ADMIN_ORIGIN_REJECTED':
       return 'Petición bloqueada (origen inválido)';
+
     default:
       // Fallback amable: transforma SNAKE_CASE → "Snake case"
       final cleaned = code

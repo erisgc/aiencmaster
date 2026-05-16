@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -271,5 +271,201 @@ describe('AdminSecurityService', () => {
         trustedTokenHash: null,
       }),
     );
+  });
+
+  // ── updateAccountRole: cambio de rol entre cuentas existentes ──
+
+  describe('updateAccountRole', () => {
+    const ROOT_ACTOR_ID = 'root-actor';
+    const TARGET_ID = 'target';
+
+    function setupActor(role: AdminRole = AdminRole.ROOT, isActive = true) {
+      const now = new Date();
+      accountRepo.findOne.mockImplementation(async ({ where }) => {
+        const w = where as { id?: string };
+        if (w.id === ROOT_ACTOR_ID) {
+          return {
+            id: ROOT_ACTOR_ID,
+            username: 'root',
+            displayName: 'Root',
+            role,
+            isActive,
+            tokenVersion: 1,
+            globalPermissions: [],
+            createdAt: now,
+            updatedAt: now,
+            devices: [],
+            churchAssignments: [],
+          } as unknown as AdminAccount;
+        }
+        if (w.id === TARGET_ID) {
+          return {
+            id: TARGET_ID,
+            username: 'target',
+            displayName: 'Target',
+            role: AdminRole.ADMIN,
+            isActive: true,
+            tokenVersion: 1,
+            globalPermissions: ['MANAGE_GLOBAL_ANNOUNCEMENTS'],
+            assignedChurchId: 'church-1',
+            createdAt: now,
+            updatedAt: now,
+            devices: [],
+            churchAssignments: [],
+          } as unknown as AdminAccount;
+        }
+        return null;
+      });
+      accountRepo.save.mockImplementation(
+        async (acc: AdminAccount) => acc as AdminAccount,
+      );
+    }
+
+    function rootActorCtx() {
+      return {
+        account: { id: ROOT_ACTOR_ID, role: AdminRole.ROOT, username: 'root' } as AdminAccount,
+        device: { id: 'd' } as AdminDevice,
+        session: {} as never,
+      };
+    }
+
+    it('rechaza si el actor ya no es ROOT activo en BD (defensa en profundidad)', async () => {
+      setupActor(AdminRole.ADMIN, true);
+      await expect(
+        service.updateAccountRole(TARGET_ID, AdminRole.ROOT, rootActorCtx()),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rechaza si el actor está desactivado', async () => {
+      setupActor(AdminRole.ROOT, false);
+      await expect(
+        service.updateAccountRole(TARGET_ID, AdminRole.ROOT, rootActorCtx()),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rechaza auto-cambio de rol (actor === target)', async () => {
+      setupActor(AdminRole.ROOT, true);
+      const ctx = rootActorCtx();
+      await expect(
+        service.updateAccountRole(ROOT_ACTOR_ID, AdminRole.ADMIN, ctx),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rechaza si el nuevo rol es el mismo que el actual', async () => {
+      setupActor(AdminRole.ROOT, true);
+      // target ya es ADMIN
+      await expect(
+        service.updateAccountRole(TARGET_ID, AdminRole.ADMIN, rootActorCtx()),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('promueve ADMIN → ROOT, limpia campos legacy y bumpa tokenVersion', async () => {
+      setupActor(AdminRole.ROOT, true);
+      // ROOT count >= 1 ya, no aplica a promoción.
+
+      await service.updateAccountRole(
+        TARGET_ID,
+        AdminRole.ROOT,
+        rootActorCtx(),
+      );
+
+      const saved = accountRepo.save.mock.calls[0][0] as AdminAccount;
+      expect(saved.role).toBe(AdminRole.ROOT);
+      expect(saved.assignedChurchId).toBeNull();
+      expect(saved.globalPermissions).toEqual([]);
+      expect(saved.tokenVersion).toBe(2); // bump
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionType: 'ROLE_PROMOTED_TO_ROOT',
+        }),
+      );
+    });
+
+    it('degrada ROOT → ADMIN cuando hay otro ROOT activo, bumpa tokenVersion', async () => {
+      const now = new Date();
+      accountRepo.findOne.mockImplementation(async ({ where }) => {
+        const w = where as { id?: string };
+        if (w.id === ROOT_ACTOR_ID) {
+          return {
+            id: ROOT_ACTOR_ID,
+            username: 'root',
+            displayName: 'Root',
+            role: AdminRole.ROOT,
+            isActive: true,
+            tokenVersion: 1,
+            globalPermissions: [],
+            createdAt: now,
+            updatedAt: now,
+            devices: [],
+            churchAssignments: [],
+          } as unknown as AdminAccount;
+        }
+        if (w.id === TARGET_ID) {
+          return {
+            id: TARGET_ID,
+            username: 'segundo',
+            displayName: 'Segundo',
+            role: AdminRole.ROOT,
+            isActive: true,
+            tokenVersion: 1,
+            globalPermissions: [],
+            createdAt: now,
+            updatedAt: now,
+            devices: [],
+            churchAssignments: [],
+          } as unknown as AdminAccount;
+        }
+        return null;
+      });
+      accountRepo.count.mockResolvedValue(2); // dos ROOTs activos
+      accountRepo.save.mockImplementation(async (a: AdminAccount) => a);
+
+      await service.updateAccountRole(
+        TARGET_ID,
+        AdminRole.ADMIN,
+        rootActorCtx(),
+      );
+
+      const saved = accountRepo.save.mock.calls[0][0] as AdminAccount;
+      expect(saved.role).toBe(AdminRole.ADMIN);
+      expect(saved.tokenVersion).toBe(2);
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionType: 'ROLE_DEMOTED_TO_ADMIN',
+        }),
+      );
+    });
+
+    it('protege al último ROOT: rechaza degradar cuando count(roots activos) <= 1', async () => {
+      accountRepo.findOne.mockImplementation(async ({ where }) => {
+        const w = where as { id?: string };
+        if (w.id === ROOT_ACTOR_ID) {
+          return {
+            id: ROOT_ACTOR_ID,
+            role: AdminRole.ROOT,
+            isActive: true,
+            tokenVersion: 1,
+          } as AdminAccount;
+        }
+        if (w.id === TARGET_ID) {
+          return {
+            id: TARGET_ID,
+            username: 'unico',
+            role: AdminRole.ROOT,
+            isActive: true,
+            tokenVersion: 1,
+          } as AdminAccount;
+        }
+        return null;
+      });
+      accountRepo.count.mockResolvedValue(1); // sólo el target es ROOT activo
+
+      await expect(
+        service.updateAccountRole(TARGET_ID, AdminRole.ADMIN, rootActorCtx()),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(accountRepo.save).not.toHaveBeenCalled();
+    });
   });
 });

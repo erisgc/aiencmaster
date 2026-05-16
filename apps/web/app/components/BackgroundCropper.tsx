@@ -76,12 +76,12 @@ export function BackgroundCropper({ imageSrc, onComplete, onCancel }: Props) {
 
   // Reset cuando cambia el modo (cada modo guarda su propio crop).
   // Sync intencional con un input externo (cambio de tab).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCrop({ x: 0, y: 0 });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setZoom(1);
   }, [mode]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const onCropComplete = useCallback(
     (_: Area, areaPixels: Area) => {
