@@ -68,6 +68,10 @@ dependencies:
   # mostrarla en pantalla — útil cuando un admin reporta un bug.
   package_info_plus: ^8.0.2
 
+  # Información del dispositivo Android (modelo, marca) para componer el
+  # deviceName legible que se muestra al ROOT al aprobar acceso.
+  device_info_plus: ^11.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
