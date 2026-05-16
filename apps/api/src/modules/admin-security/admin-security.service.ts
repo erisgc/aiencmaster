@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -789,6 +790,111 @@ export class AdminSecurityService {
       targetId: created.id,
       description: `@${account.username} asignado a iglesia ${church.name}`,
       metadata: { permissions: dedup, churchId },
+    });
+
+    return this.getAccountWithAssignments(accountId);
+  }
+
+  /**
+   * Cambia el rol de una cuenta existente (ADMIN ↔ ROOT).
+   *
+   * Reglas:
+   *  - Sólo otra cuenta ROOT puede hacerlo (los guards del controller ya
+   *    lo aseguran; aquí re-validamos en defensa en profundidad).
+   *  - Una cuenta NO puede cambiar su propio rol — evita el caso de un
+   *    ROOT que se auto-degrade por accidente o un ADMIN que mantuviera
+   *    un JWT viejo intentando auto-promoverse.
+   *  - Al promover ADMIN → ROOT: se vacían `globalPermissions` y se
+   *    conservan las `AdminChurchAssignment` (no hacen daño y dan
+   *    contexto histórico). El resolver de permisos ya devuelve "todo"
+   *    para ROOTs.
+   *  - Al degradar ROOT → ADMIN: el sistema rechaza si esto dejaría sin
+   *    ningún ROOT activo (mínimo 1 ROOT debe existir siempre). Tampoco
+   *    se ata a una iglesia por defecto — queda sin asignaciones y otro
+   *    ROOT debe asignarle iglesias después.
+   *  - El cambio fuerza un bump de `tokenVersion` → el JWT de la cuenta
+   *    afectada queda invalidado inmediatamente y necesita re-login. Esto
+   *    cierra la ventana de un degradado que sigue actuando como ROOT.
+   *  - Se audita con actionType específico (ROLE_PROMOTED_TO_ROOT /
+   *    ROLE_DEMOTED_TO_ADMIN) para que cualquier alerta SIEM lo detecte.
+   */
+  async updateAccountRole(
+    accountId: string,
+    newRole: AdminRole,
+    actor: AuthenticatedAdminContext,
+  ) {
+    const account = await this.accountRepo.findOne({
+      where: { id: accountId },
+    });
+    if (!account) throw new NotFoundException("Cuenta no encontrada");
+
+    // Defensa en profundidad: re-validamos el rol del actor contra la BD.
+    const actorFresh = await this.accountRepo.findOne({
+      where: { id: actor.account.id },
+    });
+    if (!actorFresh || actorFresh.role !== AdminRole.ROOT || !actorFresh.isActive) {
+      throw new ForbiddenException(
+        "Tu cuenta ya no es ROOT activa; no puedes cambiar roles.",
+      );
+    }
+
+    if (accountId === actor.account.id) {
+      throw new BadRequestException(
+        "No puedes cambiar tu propio rol. Pide a otra cuenta ROOT que lo haga por ti.",
+      );
+    }
+
+    if (account.role === newRole) {
+      throw new BadRequestException(
+        `La cuenta ya tiene el rol ${newRole}.`,
+      );
+    }
+
+    // Protección "último ROOT": al degradar, contamos cuántos ROOTs activos
+    // distintos del afectado quedarían. Si la cuenta a degradar es la única
+    // ROOT activa, bloqueamos.
+    if (newRole === AdminRole.ADMIN && account.role === AdminRole.ROOT) {
+      const remainingRoots = await this.accountRepo.count({
+        where: { role: AdminRole.ROOT, isActive: true },
+      });
+      // remainingRoots incluye al afectado; necesitamos al menos uno DIFERENTE
+      if (remainingRoots <= 1) {
+        throw new BadRequestException(
+          "No se puede degradar al último administrador principal. Promueve a otra cuenta ROOT antes.",
+        );
+      }
+    }
+
+    const previousRole = account.role;
+    account.role = newRole;
+    if (newRole === AdminRole.ROOT) {
+      // Limpiamos campos legados que sólo tienen sentido para ADMIN.
+      account.globalPermissions = [];
+      account.assignedChurchId = null;
+    }
+    // Bump de tokenVersion → cualquier JWT vigente queda inválido.
+    account.tokenVersion = (account.tokenVersion ?? 1) + 1;
+    await this.accountRepo.save(account);
+
+    await this.auditService.log({
+      actorAdminAccountId: actor.account.id,
+      actorDeviceId: actor.device.id,
+      actionType:
+        newRole === AdminRole.ROOT
+          ? "ROLE_PROMOTED_TO_ROOT"
+          : "ROLE_DEMOTED_TO_ADMIN",
+      targetType: "ADMIN_ACCOUNT",
+      targetId: account.id,
+      description:
+        newRole === AdminRole.ROOT
+          ? `Cuenta @${account.username} promovida a ROOT por @${actor.account.username}`
+          : `Cuenta @${account.username} degradada de ROOT a ADMIN por @${actor.account.username}`,
+      metadata: {
+        username: account.username,
+        previousRole,
+        newRole,
+        tokenVersion: account.tokenVersion,
+      },
     });
 
     return this.getAccountWithAssignments(accountId);

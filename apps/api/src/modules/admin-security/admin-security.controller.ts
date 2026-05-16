@@ -20,6 +20,7 @@ import { CreateAdminAccountDto } from "./dto/create-admin-account.dto";
 import { QueryAuditLogDto } from "./dto/query-audit-log.dto";
 import { ResetAdminPasswordDto } from "./dto/reset-admin-password.dto";
 import { ResolveAccessRequestDto } from "./dto/resolve-access-request.dto";
+import { UpdateAccountRoleDto } from "./dto/update-account-role.dto";
 import { UpdateAdminAccountDto } from "./dto/update-admin-account.dto";
 import { UpdateGlobalPermissionsDto } from "./dto/update-global-permissions.dto";
 import { AdminAuthGuard } from "./guards/admin-auth.guard";
@@ -171,5 +172,20 @@ export class AdminSecurityController {
     @AdminAuth() actor: AuthenticatedAdminContext,
   ) {
     return this.securityService.removeChurchAssignment(id, churchId, actor);
+  }
+
+  /**
+   * Cambia el rol de una cuenta existente (ADMIN ↔ ROOT). Requiere que el
+   * actor sea ROOT (los guards lo aseguran) y que la cuenta target NO sea
+   * la propia (el service lo valida). Al degradar un ROOT se exige que
+   * quede al menos otro ROOT activo.
+   */
+  @Patch("accounts/:id/role")
+  updateAccountRole(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() dto: UpdateAccountRoleDto,
+    @AdminAuth() actor: AuthenticatedAdminContext,
+  ) {
+    return this.securityService.updateAccountRole(id, dto.role, actor);
   }
 }

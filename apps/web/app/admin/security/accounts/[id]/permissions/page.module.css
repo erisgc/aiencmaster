@@ -356,3 +356,139 @@
   justify-content: flex-end;
   margin-top: 0.5rem;
 }
+
+/* ── Cambio de rol ── */
+
+.roleSection {
+  background: var(--gradient-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: clamp(1.1rem, 3vw, 1.5rem);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.roleSection::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(
+    180deg,
+    var(--gem-amethyst, #7d4cdb),
+    var(--gem-sapphire)
+  );
+}
+
+.roleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.roleCurrent {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.roleLabel {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.roleBadgeRoot {
+  padding: 0.32rem 0.75rem;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--gem-amethyst, #7d4cdb) 18%, transparent);
+  color: var(--gem-amethyst, #7d4cdb);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.roleBadgeAdmin {
+  padding: 0.32rem 0.75rem;
+  border-radius: 100px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.rolePromoteBtn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--gem-amethyst, #7d4cdb),
+    var(--gem-sapphire)
+  );
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  box-shadow: 0 8px 18px -10px color-mix(
+    in srgb,
+    var(--gem-amethyst, #7d4cdb) 60%,
+    transparent
+  );
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.rolePromoteBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.rolePromoteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.roleDemoteBtn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0.6rem 1.05rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.roleDemoteBtn:hover:not(:disabled) {
+  background: var(--danger-weak);
+}
+
+.roleDemoteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.roleSelfHint {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-style: italic;
+  max-width: 36ch;
+  line-height: 1.4;
+}
+
+.roleFootnote {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
