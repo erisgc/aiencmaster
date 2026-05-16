@@ -8,12 +8,12 @@ import '../services/local_auth_service.dart';
 ///
 /// La fuente de verdad para "estoy logueado" es la cookie HttpOnly que el
 /// backend setea en /admin/auth/login. Cuando arranca la app, llamamos a
-/// /admin/session para saber si la cookie sigue siendo válida.
+/// /admin/auth/session para saber si la cookie sigue siendo válida.
 ///
 /// `locked` indica que tenemos sesión válida pero el usuario debe pasar
 /// el bloqueo local (biometría / PIN) antes de ver el panel.
 enum AuthPhase {
-  /// Aún no sabemos qué hacer (esperando /admin/session).
+  /// Aún no sabemos qué hacer (esperando /admin/auth/session).
   loading,
 
   /// No hay sesión, hay que loguear o aceptar invitación.
