@@ -64,6 +64,10 @@ dependencies:
   # Abrir URLs externas (adjuntos de anuncios, Google Maps).
   url_launcher: ^6.3.1
 
+  # Leer la versión actual del APK (versionName + versionCode) para
+  # mostrarla en pantalla — útil cuando un admin reporta un bug.
+  package_info_plus: ^8.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -5,6 +5,7 @@ import '../../core/api/api_client.dart';
 import '../../core/state/locator.dart';
 import '../../core/theme/gem_palette.dart';
 import '../../core/widgets/gem_widgets.dart';
+import '../../core/widgets/version_chip.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -126,6 +127,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () => context.go('/invite'),
                 child: const Text('Tengo una invitación nueva'),
               ),
+              const SizedBox(height: 12),
+              const Center(child: VersionChip()),
             ],
           ),
         ),

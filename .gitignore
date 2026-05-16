@@ -37,3 +37,12 @@ coverage
 
 # Otros
 .cache
+
+# ── Secretos de firma Android ──
+# Defensa en profundidad por si alguien commitea desde la raíz por error.
+# La regla específica está en apps/admin_app/.gitignore, esta es belt-and-
+# braces.
+*.jks
+*.keystore
+**/key.properties
+**/key.properties.b64
