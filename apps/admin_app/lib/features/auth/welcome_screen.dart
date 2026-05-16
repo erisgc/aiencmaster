@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/gem_palette.dart';
 import '../../core/widgets/gem_widgets.dart';
+import '../../core/widgets/version_chip.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -85,6 +86,8 @@ class WelcomeScreen extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 16),
+                const Center(child: VersionChip()),
               ],
             ),
           ),

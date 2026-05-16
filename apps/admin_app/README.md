@@ -79,36 +79,30 @@ Defaults (debug en emulador Android):
 - `AIENC_MOBILE_ORIGIN=aiencadmin://app` — debe coincidir con la env
   `MOBILE_APP_ORIGIN` configurada en el backend NestJS
 
-## Firma release (TODO antes de publicar)
+## Firma release y distribución
 
-1. Generar keystore:
-   ```bash
-   keytool -genkey -v -keystore aienc-admin-release.jks \
-     -keyalg RSA -keysize 2048 -validity 10000 \
-     -alias aienc-admin
-   ```
-2. Crear `android/key.properties` (no commitear):
-   ```properties
-   storePassword=…
-   keyPassword=…
-   keyAlias=aienc-admin
-   storeFile=../aienc-admin-release.jks
-   ```
-3. `flutter build apk --release` firmará usando ese keystore. Si
-   `key.properties` no existe, cae al debug sign para que el flujo dev
-   no se rompa.
+Toda la receta paso a paso (generar keystore, configurar Vercel y Railway,
+publicar releases manuales o vía GitHub Actions) está en
+[`docs/release-distribution.md`](docs/release-distribution.md).
 
-## Distribución del APK
+Resumen:
 
-El APK firmado se publica como asset en un **GitHub Release** del
-repo `ErisGC/AIENCMASTER`. La URL pública del asset se inyecta en la
-web vía `NEXT_PUBLIC_AIENC_APK_URL` en Vercel para que el botón
-"Descargar APK" de `/admin/mobile-required` apunte ahí.
+```bash
+# Una sola vez por vida del proyecto
+pwsh apps/admin_app/scripts/setup-release-keystore.ps1   # Windows
+bash apps/admin_app/scripts/setup-release-keystore.sh    # macOS/Linux
 
-Ejemplo:
+# Para publicar (CI):
+git tag admin-app-v0.2.0
+git push origin admin-app-v0.2.0
+# El workflow .github/workflows/admin-app-release.yml firma y publica.
 
-```
-https://github.com/ErisGC/AIENCMASTER/releases/download/admin-app-v0.1.0/aienc-admin.apk
+# O para publicar manualmente:
+cd apps/admin_app
+flutter build apk --release \
+  --dart-define=AIENC_API_BASE_URL=https://api.aienc.co \
+  --dart-define=AIENC_MOBILE_ORIGIN=aiencadmin://app
+# y sube build/app/outputs/flutter-apk/app-release.apk a GitHub Releases.
 ```
 
 ## Backend (configuración necesaria)

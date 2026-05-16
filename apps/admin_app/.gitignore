@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ── Secretos de firma release ──
+# NUNCA commitear el keystore ni el archivo de propiedades. La pérdida
+# del keystore implica perder la capacidad de actualizar la app instalada
+# en los teléfonos de los administradores; trátalo con el cuidado de una
+# llave privada SSH.
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+/android/key.properties.b64
+

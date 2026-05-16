@@ -57,8 +57,37 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // R8 minify + recurso shrinking reducen el APK ~3× respecto al
+            // debug (de ~150MB a ~40-50MB). Flutter genera sus propias
+            // reglas Proguard en flutter_proguard_rules.pro; añadimos las
+            // nuestras en proguard-rules.pro para conservar las clases que
+            // los plugins nativos (geolocator, image_picker, etc.) usan
+            // vía reflection.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        getByName("debug") {
+            // Debug keeps everything for hot-reload and stack traces.
             isMinifyEnabled = false
             isShrinkResources = false
+        }
+    }
+
+    // Splits por ABI: generamos un APK más pequeño por arquitectura para
+    // que cada teléfono baje sólo los nativos que necesita (~12-15MB en vez
+    // de ~40MB universal). El usuario puede preferir UN APK universal —
+    // dejamos universal=true para que /admin/mobile-required tenga un
+    // único enlace compatible con cualquier dispositivo.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = true
         }
     }
 }
