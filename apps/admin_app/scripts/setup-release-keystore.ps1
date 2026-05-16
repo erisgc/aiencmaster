@@ -136,7 +136,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Escribimos key.properties que build.gradle.kts ya sabe leer.
-$relStorePath = '..\aienc-admin-release.jks'
+# IMPORTANTE: usar forward slash '/'. En archivos .properties de Java el
+# backslash '\' es caracter de escape (`\a` se interpreta como 'a' sin el
+# separador). Si usaramos '..\aienc-admin-release.jks', Gradle lo leeria
+# como '..aienc-admin-release.jks' y no encontraria el keystore.
+$relStorePath = '../aienc-admin-release.jks'
 $content = @"
 # Generado por scripts/setup-release-keystore.ps1
 # NO commitear este archivo. Ya esta en .gitignore.
