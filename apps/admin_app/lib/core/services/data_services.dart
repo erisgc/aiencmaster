@@ -334,23 +334,41 @@ class InvitationService {
     return const [];
   }
 
+  /// Crea una invitación para una nueva cuenta administrativa.
+  ///
+  /// Para invitaciones ADMIN se requiere `assignedChurchId`. Para
+  /// invitaciones ROOT (`targetRole = 'ROOT'`) la iglesia y los permisos
+  /// se ignoran; el backend valida que el actor también sea ROOT.
   Future<CreatedInvitation> create({
     required String username,
     required String displayName,
-    required String assignedChurchId,
-    required List<ChurchPermission> churchPermissions,
+    String? assignedChurchId,
+    String targetRole = 'ADMIN',
+    List<ChurchPermission> churchPermissions = const [],
     List<GlobalPermission> globalPermissions = const [],
   }) async {
+    final body = <String, dynamic>{
+      'username': username.trim(),
+      'displayName': displayName.trim(),
+      'targetRole': targetRole,
+    };
+    if (targetRole == 'ADMIN') {
+      if (assignedChurchId == null) {
+        throw ArgumentError(
+          'assignedChurchId es obligatorio para invitaciones ADMIN',
+        );
+      }
+      body['assignedChurchId'] = assignedChurchId;
+      body['churchPermissions'] =
+          churchPermissions.map((e) => e.name).toList();
+      if (globalPermissions.isNotEmpty) {
+        body['globalPermissions'] =
+            globalPermissions.map((e) => e.name).toList();
+      }
+    }
     final res = await _api.postJson<Map<String, dynamic>>(
       '/admin/security/invitations',
-      body: {
-        'username': username.trim(),
-        'displayName': displayName.trim(),
-        'assignedChurchId': assignedChurchId,
-        'churchPermissions': churchPermissions.map((e) => e.name).toList(),
-        if (globalPermissions.isNotEmpty)
-          'globalPermissions': globalPermissions.map((e) => e.name).toList(),
-      },
+      body: body,
     );
     return CreatedInvitation.fromJson(res);
   }

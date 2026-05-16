@@ -55,15 +55,38 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
     // Construimos el deep-link a la app para que el admin lo comparta. La web
     // también acepta el mismo token via /admin/invite/[token].
     final deepLink = 'aiencadmin://invite?token=${inv.token}';
+    final isRoot = inv.targetRole == 'ROOT';
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Invitación creada para @${inv.username}'),
+        title: Text(
+          isRoot
+              ? 'Invitación ROOT creada para @${inv.username}'
+              : 'Invitación creada para @${inv.username}',
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isRoot)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: GemPalette.amethyst.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Esta invitación creará otra cuenta ROOT al aceptarse.',
+                    style: TextStyle(
+                      color: GemPalette.amethyst,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
               const Text(
                 'Comparte este enlace con la persona invitada. Es válido por '
                 '72 horas y sólo se puede usar una vez. ',
@@ -193,6 +216,7 @@ class _InvitationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPending = inv.status == 'PENDING';
+    final isRoot = inv.targetRole == 'ROOT';
     final statusColor = switch (inv.status) {
       'PENDING' => GemPalette.topaz,
       'ACCEPTED' => GemPalette.emerald,
@@ -219,15 +243,27 @@ class _InvitationTile extends StatelessWidget {
                   ],
                 ),
               ),
-              GemBadge(
-                label: invitationStatusLabel(inv.status),
-                color: statusColor,
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  GemBadge(
+                    label: isRoot ? 'Principal' : 'Admin',
+                    color: isRoot ? GemPalette.amethyst : GemPalette.sapphire,
+                  ),
+                  GemBadge(
+                    label: invitationStatusLabel(inv.status),
+                    color: statusColor,
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Iglesia: ${inv.assignedChurchName ?? "—"}',
+            isRoot
+                ? 'Sin iglesia asignada — acceso total al sistema'
+                : 'Iglesia: ${inv.assignedChurchName ?? "—"}',
             style: const TextStyle(
                 color: GemPalette.textPrimary, fontSize: 13),
           ),
@@ -273,6 +309,10 @@ class _NewInvitationScreenState extends State<_NewInvitationScreen> {
   PermissionsCatalog? _catalog;
   String _templateKey = 'PASTOR';
   Set<ChurchPermission> _churchPerms = {};
+
+  /// Si está activado, la invitación crea otra cuenta ROOT (administrador
+  /// principal). Sólo otra cuenta ROOT puede hacerlo — el backend valida.
+  bool _rootInvitation = false;
 
   bool _submitting = false;
   bool _loadingCatalog = true;
@@ -355,10 +395,38 @@ class _NewInvitationScreenState extends State<_NewInvitationScreen> {
       setState(() => _error = 'Nombre visible inválido (2–100 caracteres).');
       return;
     }
-    if (_churchId == null) {
+    if (!_rootInvitation && _churchId == null) {
       setState(() => _error = 'Selecciona la iglesia asignada.');
       return;
     }
+
+    // Confirmación adicional para invitaciones ROOT — es la acción más
+    // sensible del sistema.
+    if (_rootInvitation) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Crear otra cuenta ROOT'),
+          content: const Text(
+            'Vas a generar una invitación para crear OTRA cuenta de '
+            'administrador principal (ROOT). La nueva cuenta tendrá '
+            'acceso total al sistema, igual que la tuya. ¿Continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Generar invitación ROOT'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -367,8 +435,10 @@ class _NewInvitationScreenState extends State<_NewInvitationScreen> {
       final created = await Locator.invitations.create(
         username: user,
         displayName: name,
-        assignedChurchId: _churchId!,
-        churchPermissions: _churchPerms.toList(),
+        targetRole: _rootInvitation ? 'ROOT' : 'ADMIN',
+        assignedChurchId: _rootInvitation ? null : _churchId,
+        churchPermissions:
+            _rootInvitation ? const [] : _churchPerms.toList(),
       );
       if (!mounted) return;
       Navigator.pop(context, created);
@@ -420,33 +490,69 @@ class _NewInvitationScreenState extends State<_NewInvitationScreen> {
                       ),
                       maxLength: 100,
                     ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: _churchId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                          labelText: 'Iglesia asignada'),
-                      items: [
-                        for (final c in _churches)
-                          DropdownMenuItem(
-                            value: c.id,
-                            child: Text('${c.name} — ${c.city}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _churchId = v),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'El nuevo admin podrá gestionar la iglesia que '
-                      'selecciones. Más adelante puedes asignarle otras.',
-                      style: TextStyle(
-                          color: GemPalette.textMuted, fontSize: 12),
-                    ),
+                    if (!_rootInvitation) ...[
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _churchId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            labelText: 'Iglesia asignada'),
+                        items: [
+                          for (final c in _churches)
+                            DropdownMenuItem(
+                              value: c.id,
+                              child: Text('${c.name} — ${c.city}'),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _churchId = v),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'El nuevo admin podrá gestionar la iglesia que '
+                        'selecciones. Más adelante puedes asignarle otras.',
+                        style: TextStyle(
+                            color: GemPalette.textMuted, fontSize: 12),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              if (cat != null) ...[
+              // Toggle "Crear como administrador principal" — sólo visible
+              // a ROOTs (esta pantalla ya lo es, está dentro de la tab
+              // Seguridad que sólo se muestra a ROOT). El backend además
+              // valida que el actor sea ROOT.
+              GemCard(
+                borderGradient: const LinearGradient(
+                  colors: [GemPalette.amethyst, GemPalette.sapphire],
+                ),
+                child: CheckboxListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: GemPalette.amethyst,
+                  value: _rootInvitation,
+                  onChanged: (v) =>
+                      setState(() => _rootInvitation = v ?? false),
+                  title: const Text(
+                    'Crear como administrador principal (ROOT)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: GemPalette.amethyst),
+                  ),
+                  subtitle: const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(
+                      'La nueva cuenta tendrá los mismos privilegios totales '
+                      'que tú: gestiona todas las iglesias, todos los admins, '
+                      'y puede a su vez invitar a otras cuentas ROOT.',
+                      style: TextStyle(
+                          color: GemPalette.textMuted, fontSize: 12, height: 1.4),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (!_rootInvitation && cat != null) ...[
                 GemCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

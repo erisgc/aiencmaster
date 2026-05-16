@@ -10,11 +10,14 @@ export type AdminInvitationStatus =
   | 'REVOKED'
   | 'EXPIRED';
 
+export type AdminTargetRole = 'ROOT' | 'ADMIN';
+
 export interface AdminInvitationSummary {
   id: string;
   username: string;
   displayName: string;
-  assignedChurchId: string;
+  targetRole: AdminTargetRole;
+  assignedChurchId: string | null;
   assignedChurchName: string | null;
   status: AdminInvitationStatus;
   expiresAt: string;
@@ -27,7 +30,8 @@ export interface AdminInvitationCreated {
   token: string;
   username: string;
   displayName: string;
-  assignedChurchId: string;
+  targetRole: AdminTargetRole;
+  assignedChurchId: string | null;
   expiresAt: string;
 }
 
@@ -36,6 +40,7 @@ export interface InvitationPreview {
   status: AdminInvitationStatus;
   username?: string;
   displayName?: string;
+  targetRole?: AdminTargetRole;
   churchName?: string | null;
   expiresAt?: string;
 }
@@ -108,7 +113,10 @@ export function adminListInvitations() {
 export function adminCreateInvitation(payload: {
   username: string;
   displayName: string;
-  assignedChurchId: string;
+  /** Omitir para invitar a un ROOT (no se asigna a una iglesia). */
+  assignedChurchId?: string;
+  /** Default 'ADMIN'. Sólo otra cuenta ROOT puede pedir 'ROOT'. */
+  targetRole?: AdminTargetRole;
   churchPermissions?: ChurchPermission[];
   globalPermissions?: GlobalPermission[];
 }) {
@@ -137,11 +145,13 @@ export function previewInvitation(token: string) {
 }
 
 export function acceptInvitation(token: string, password: string) {
-  return invitationsRequest<{ id: string; username: string; displayName: string }>(
-    '/admin/auth/invitations/accept',
-    {
-      method: 'POST',
-      body: JSON.stringify({ token, password }),
-    },
-  );
+  return invitationsRequest<{
+    id: string;
+    username: string;
+    displayName: string;
+    role: AdminTargetRole;
+  }>('/admin/auth/invitations/accept', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
 }
