@@ -156,21 +156,63 @@ class _InviteScreenState extends State<InviteScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.verified_user_outlined,
-                              color: GemPalette.emerald),
+                          Icon(
+                            preview.targetRole == 'ROOT'
+                                ? Icons.shield_outlined
+                                : Icons.verified_user_outlined,
+                            color: preview.targetRole == 'ROOT'
+                                ? GemPalette.amethyst
+                                : GemPalette.emerald,
+                          ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Invitación válida',
-                            style: Theme.of(context).textTheme.titleMedium,
+                          Expanded(
+                            child: Text(
+                              preview.targetRole == 'ROOT'
+                                  ? 'Invitación válida (cuenta principal)'
+                                  : 'Invitación válida',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ),
                         ],
                       ),
+                      if (preview.targetRole == 'ROOT')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: GemPalette.amethyst.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: GemPalette.amethyst.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: const Text(
+                              'Estás activando una cuenta de administrador '
+                              'principal (ROOT). Tendrás acceso total al '
+                              'sistema. Usa una contraseña fuerte y guárdala '
+                              'en privado.',
+                              style: TextStyle(
+                                color: GemPalette.amethyst,
+                                fontSize: 12.5,
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       _InfoRow(label: 'Usuario', value: preview.username ?? '—'),
                       _InfoRow(
                           label: 'Nombre', value: preview.displayName ?? '—'),
+                      if (preview.targetRole != 'ROOT')
+                        _InfoRow(
+                            label: 'Iglesia',
+                            value: preview.churchName ?? '—'),
                       _InfoRow(
-                          label: 'Iglesia', value: preview.churchName ?? '—'),
+                          label: 'Rol',
+                          value: preview.targetRole == 'ROOT'
+                              ? 'Administrador principal'
+                              : 'Administrador'),
                       if (preview.expiresAt != null)
                         _InfoRow(
                           label: 'Expira',

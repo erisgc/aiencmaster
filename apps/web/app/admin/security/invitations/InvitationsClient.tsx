@@ -38,6 +38,11 @@ export function InvitationsClient() {
   const [formPermissions, setFormPermissions] = useState<ChurchPermission[]>(
     [],
   );
+  // Si el creador marca este toggle, la invitación crea una nueva cuenta
+  // ROOT (administrador principal) en vez de un admin de iglesia.
+  // El backend valida que sólo otra cuenta ROOT puede hacerlo — aquí
+  // sólo lo exponemos en la UI.
+  const [formRootInvitation, setFormRootInvitation] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdLink, setCreatedLink] = useState<{
@@ -104,24 +109,44 @@ export function InvitationsClient() {
       setFormError('Nombre visible inválido (2–100 caracteres).');
       return;
     }
-    if (!formChurchId) {
+    if (!formRootInvitation && !formChurchId) {
       setFormError('Selecciona la iglesia que el admin podrá administrar.');
       return;
     }
 
+    // Confirmación explícita cuando se está creando otra cuenta ROOT — es
+    // una acción crítica y queremos que el ROOT pulse "sí" intencionalmente.
+    if (formRootInvitation) {
+      const ok = window.confirm(
+        `Vas a generar una invitación para crear OTRA cuenta de administrador principal (ROOT). ` +
+          `La nueva cuenta tendrá acceso total al sistema, igual que tú. ` +
+          `¿Continuar?`,
+      );
+      if (!ok) return;
+    }
+
     setSubmitting(true);
     try {
-      const inv = await adminCreateInvitation({
-        username,
-        displayName,
-        assignedChurchId: formChurchId,
-        churchPermissions: formPermissions,
-      });
+      const inv = await adminCreateInvitation(
+        formRootInvitation
+          ? {
+              username,
+              displayName,
+              targetRole: 'ROOT',
+            }
+          : {
+              username,
+              displayName,
+              assignedChurchId: formChurchId,
+              churchPermissions: formPermissions,
+            },
+      );
       const url = `${window.location.origin}/admin/invite/${encodeURIComponent(inv.token)}`;
       setCreatedLink({ url, invitation: inv });
       setFormUsername('');
       setFormDisplayName('');
       setFormChurchId('');
+      setFormRootInvitation(false);
       // Reset al template Pastor para la próxima invitación
       const pastor = catalog?.templates.find((t) => t.key === 'PASTOR');
       if (pastor) {
@@ -213,28 +238,49 @@ export function InvitationsClient() {
             </div>
           </div>
 
-          <div className={styles.field}>
-            <label>Iglesia asignada</label>
-            <span className={styles.hint}>
-              El admin sólo podrá gestionar datos y subir informes de la
-              iglesia que selecciones. Después podrás asignarle más iglesias
-              desde el panel de permisos.
-            </span>
-            <select
-              value={formChurchId}
-              onChange={(e) => setFormChurchId(e.target.value)}
-              required
-            >
-              <option value="">Selecciona una iglesia…</option>
-              {churches.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} — {c.city}
-                </option>
-              ))}
-            </select>
+          <div className={styles.rootToggle}>
+            <label className={styles.rootToggleLabel}>
+              <input
+                type="checkbox"
+                checked={formRootInvitation}
+                onChange={(e) => setFormRootInvitation(e.target.checked)}
+              />
+              <span>
+                <strong>Crear como administrador principal (ROOT)</strong>
+                <span className={styles.permDesc}>
+                  La nueva cuenta tendrá los mismos privilegios totales que
+                  tú: gestiona todas las iglesias, todos los admins, y puede
+                  a su vez invitar a otras cuentas ROOT. Sólo tú lo puedes
+                  hacer porque eres ROOT — guarda el enlace en privado.
+                </span>
+              </span>
+            </label>
           </div>
 
-          {catalog && (
+          {!formRootInvitation && (
+            <div className={styles.field}>
+              <label>Iglesia asignada</label>
+              <span className={styles.hint}>
+                El admin sólo podrá gestionar datos y subir informes de la
+                iglesia que selecciones. Después podrás asignarle más iglesias
+                desde el panel de permisos.
+              </span>
+              <select
+                value={formChurchId}
+                onChange={(e) => setFormChurchId(e.target.value)}
+                required={!formRootInvitation}
+              >
+                <option value="">Selecciona una iglesia…</option>
+                {churches.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {!formRootInvitation && catalog && (
             <>
               <div className={styles.field}>
                 <label>Rol que va a tener</label>
@@ -347,6 +393,7 @@ export function InvitationsClient() {
                 <tr>
                   <th>Usuario</th>
                   <th>Nombre</th>
+                  <th>Rol</th>
                   <th>Iglesia</th>
                   <th>Estado</th>
                   <th>Expira</th>
@@ -358,7 +405,22 @@ export function InvitationsClient() {
                   <tr key={inv.id}>
                     <td>@{inv.username}</td>
                     <td>{inv.displayName}</td>
-                    <td>{inv.assignedChurchName ?? '—'}</td>
+                    <td>
+                      <span
+                        className={
+                          inv.targetRole === 'ROOT'
+                            ? styles.badgeRoot
+                            : styles.badgeAdmin
+                        }
+                      >
+                        {inv.targetRole === 'ROOT' ? 'Principal' : 'Admin'}
+                      </span>
+                    </td>
+                    <td>
+                      {inv.targetRole === 'ROOT'
+                        ? '—'
+                        : inv.assignedChurchName ?? '—'}
+                    </td>
                     <td>
                       <span className={`${styles.badge} ${styles[`badge_${inv.status}`]}`}>
                         {invitationStatusLabel(inv.status)}

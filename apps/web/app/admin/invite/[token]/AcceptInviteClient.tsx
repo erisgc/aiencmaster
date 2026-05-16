@@ -153,11 +153,27 @@ export function AcceptInviteClient({ token }: Props) {
   return (
     <div className={styles.shell}>
       <section className={styles.card}>
-        <h1 className={styles.title}>Activar cuenta de administrador</h1>
+        <h1 className={styles.title}>
+          {preview.targetRole === 'ROOT'
+            ? 'Activar cuenta de administrador principal'
+            : 'Activar cuenta de administrador'}
+        </h1>
         <p className={styles.subtitle}>
-          Has sido invitado/a a administrar la iglesia{' '}
-          <strong>{preview.churchName ?? 'asignada'}</strong>. Define una
-          contraseña para activar tu cuenta.
+          {preview.targetRole === 'ROOT' ? (
+            <>
+              Has sido invitado/a como{' '}
+              <strong>administrador principal (ROOT)</strong> del sistema
+              AIENC. Tu cuenta tendrá acceso total: todas las iglesias, todos
+              los admins, y podrás a su vez invitar a otras cuentas ROOT.
+              Define una contraseña fuerte para activar tu cuenta.
+            </>
+          ) : (
+            <>
+              Has sido invitado/a a administrar la iglesia{' '}
+              <strong>{preview.churchName ?? 'asignada'}</strong>. Define una
+              contraseña para activar tu cuenta.
+            </>
+          )}
         </p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -178,14 +194,16 @@ export function AcceptInviteClient({ token }: Props) {
             <input value={preview.displayName ?? ''} readOnly disabled />
           </div>
 
-          <div className={styles.field}>
-            <label>Iglesia asignada</label>
-            <span className={styles.hint}>
-              Solo podrás generar informes y gestionar contenido de esta
-              iglesia.
-            </span>
-            <input value={preview.churchName ?? ''} readOnly disabled />
-          </div>
+          {preview.targetRole !== 'ROOT' && (
+            <div className={styles.field}>
+              <label>Iglesia asignada</label>
+              <span className={styles.hint}>
+                Solo podrás generar informes y gestionar contenido de esta
+                iglesia.
+              </span>
+              <input value={preview.churchName ?? ''} readOnly disabled />
+            </div>
+          )}
 
           <div className={styles.field}>
             <label>Nueva contraseña</label>

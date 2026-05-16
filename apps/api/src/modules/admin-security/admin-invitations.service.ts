@@ -2,6 +2,7 @@ import { randomBytes, createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -37,11 +38,22 @@ function generateToken(): string {
 export interface CreateInvitationInput {
   username: string;
   displayName: string;
-  assignedChurchId: string;
+  /** Obligatorio para ADMIN; ignorado para ROOT. */
+  assignedChurchId?: string | null;
   createdByAdminAccountId: string;
-  /** Permisos pre-asignados sobre la iglesia. Si no se envía, se usan todos. */
+  /**
+   * Rol del actor (ROOT/ADMIN) que está creando la invitación. El servicio
+   * lo valida internamente para defensa en profundidad — aunque los guards
+   * en el controller ya garantizan que sólo ROOT entra aquí, una segunda
+   * verificación en la capa de servicio impide que cualquier otra llamada
+   * (interna, tests, scripts) cree una invitación ROOT sin tener rol ROOT.
+   */
+  createdByAdminAccountRole: AdminRole;
+  /** Rol con el que se creará la cuenta al aceptar. Default ADMIN. */
+  targetRole?: AdminRole;
+  /** Permisos pre-asignados sobre la iglesia. Ignorado para ROOT. */
   churchPermissions?: ChurchPermission[];
-  /** Permisos globales pre-asignados (opcional). */
+  /** Permisos globales pre-asignados (opcional). Ignorado para ROOT. */
   globalPermissions?: GlobalPermission[];
 }
 
@@ -50,7 +62,8 @@ export interface InvitationWithToken {
   token: string;
   username: string;
   displayName: string;
-  assignedChurchId: string;
+  assignedChurchId: string | null;
+  targetRole: AdminRole;
   expiresAt: Date;
 }
 
@@ -86,6 +99,38 @@ export class AdminInvitationsService {
       );
     }
 
+    const targetRole = input.targetRole ?? AdminRole.ADMIN;
+
+    // ── Defensa en profundidad: cadena ROOT→ROOT cerrada ──
+    // Aunque el controller ya restringe el endpoint a actores ROOT (vía
+    // RootRoleGuard), validamos también aquí para que ninguna otra ruta
+    // de creación (scripts internos, tests, factory functions, etc.)
+    // pueda saltarse la regla. La única forma de crear una cuenta ROOT
+    // es que otra cuenta ROOT — autenticada como ROOT — genere la
+    // invitación con `targetRole = ROOT`.
+    if (
+      targetRole === AdminRole.ROOT &&
+      input.createdByAdminAccountRole !== AdminRole.ROOT
+    ) {
+      throw new ForbiddenException(
+        "Sólo una cuenta ROOT puede generar invitaciones para crear otra cuenta ROOT",
+      );
+    }
+
+    // El verificador adicional: el actor que se declara como ROOT
+    // realmente exista y siga siendo ROOT en la base de datos en este
+    // momento (no confiamos solo en el JWT).
+    if (targetRole === AdminRole.ROOT) {
+      const actor = await this.accountRepo.findOne({
+        where: { id: input.createdByAdminAccountId },
+      });
+      if (!actor || actor.role !== AdminRole.ROOT || !actor.isActive) {
+        throw new ForbiddenException(
+          "Tu cuenta ya no es ROOT activa; no puedes crear otra cuenta ROOT",
+        );
+      }
+    }
+
     const existingAccount = await this.accountRepo.findOne({
       where: { username: usernameNorm },
     });
@@ -93,11 +138,22 @@ export class AdminInvitationsService {
       throw new ConflictException("El nombre de usuario ya está en uso");
     }
 
-    const church = await this.churchRepo.findOne({
-      where: { id: input.assignedChurchId },
-    });
-    if (!church) {
-      throw new NotFoundException("Iglesia no encontrada");
+    // Iglesia obligatoria sólo para invitaciones ADMIN. Una invitación
+    // ROOT puede llegar sin iglesia — los ROOT no se asignan a una.
+    let assignedChurchId: string | null = null;
+    if (targetRole === AdminRole.ADMIN) {
+      if (!input.assignedChurchId) {
+        throw new BadRequestException(
+          "Una invitación ADMIN requiere una iglesia asignada",
+        );
+      }
+      const church = await this.churchRepo.findOne({
+        where: { id: input.assignedChurchId },
+      });
+      if (!church) {
+        throw new NotFoundException("Iglesia no encontrada");
+      }
+      assignedChurchId = church.id;
     }
 
     const existingPending = await this.invitationRepo.findOne({
@@ -120,10 +176,17 @@ export class AdminInvitationsService {
       tokenHash,
       username: usernameNorm,
       displayName,
-      assignedChurchId: input.assignedChurchId,
+      targetRole,
+      assignedChurchId,
+      // Los permisos pre-asignados sólo aplican para ADMIN. Para ROOT
+      // los dejamos vacíos: la cuenta ROOT no usa listas explícitas
+      // porque tiene todos los permisos por construcción.
       churchPermissions:
-        input.churchPermissions ?? [...ALL_CHURCH_PERMISSIONS],
-      globalPermissions: input.globalPermissions ?? [],
+        targetRole === AdminRole.ROOT
+          ? []
+          : input.churchPermissions ?? [...ALL_CHURCH_PERMISSIONS],
+      globalPermissions:
+        targetRole === AdminRole.ROOT ? [] : input.globalPermissions ?? [],
       createdByAdminAccountId: input.createdByAdminAccountId,
       status: AdminInvitationStatus.PENDING,
       expiresAt,
@@ -137,6 +200,7 @@ export class AdminInvitationsService {
       username: saved.username,
       displayName: saved.displayName,
       assignedChurchId: saved.assignedChurchId,
+      targetRole: saved.targetRole,
       expiresAt: saved.expiresAt,
     };
   }
@@ -146,8 +210,12 @@ export class AdminInvitationsService {
       order: { createdAt: "DESC" },
     });
 
-    // Adjuntamos el nombre de la iglesia para que el panel ROOT pueda mostrarlo.
-    const churchIds = invitations.map((inv) => inv.assignedChurchId);
+    // Adjuntamos el nombre de la iglesia para que el panel ROOT pueda
+    // mostrarlo. Las invitaciones ROOT no tienen iglesia asignada — su
+    // assignedChurchId es null y no entra en la consulta.
+    const churchIds = invitations
+      .map((inv) => inv.assignedChurchId)
+      .filter((id): id is string => id !== null);
     const churches = churchIds.length
       ? await this.churchRepo.find({ where: churchIds.map((id) => ({ id })) })
       : [];
@@ -157,8 +225,11 @@ export class AdminInvitationsService {
       id: inv.id,
       username: inv.username,
       displayName: inv.displayName,
+      targetRole: inv.targetRole,
       assignedChurchId: inv.assignedChurchId,
-      assignedChurchName: churchMap.get(inv.assignedChurchId) ?? null,
+      assignedChurchName: inv.assignedChurchId
+        ? churchMap.get(inv.assignedChurchId) ?? null
+        : null,
       status: inv.status,
       expiresAt: inv.expiresAt,
       acceptedAt: inv.acceptedAt,
@@ -197,15 +268,18 @@ export class AdminInvitationsService {
       return { valid: false, status: AdminInvitationStatus.EXPIRED };
     }
 
-    const church = await this.churchRepo.findOne({
-      where: { id: invitation.assignedChurchId },
-    });
+    const church = invitation.assignedChurchId
+      ? await this.churchRepo.findOne({
+          where: { id: invitation.assignedChurchId },
+        })
+      : null;
 
     return {
       valid: true,
       status: AdminInvitationStatus.PENDING,
       username: invitation.username,
       displayName: invitation.displayName,
+      targetRole: invitation.targetRole,
       churchName: church?.name ?? null,
       expiresAt: invitation.expiresAt,
     };
@@ -248,30 +322,64 @@ export class AdminInvitationsService {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Si la invitación es para ROOT, comprobamos UNA VEZ MÁS que el actor
+    // que la creó sigue siendo ROOT activo en este instante. Esto cierra
+    // una posible ventana donde se invita a una nueva ROOT, se desactiva
+    // o degrada al creador, y aún se intenta aceptar.
+    if (invitation.targetRole === AdminRole.ROOT) {
+      const creator = await this.accountRepo.findOne({
+        where: { id: invitation.createdByAdminAccountId },
+      });
+      if (!creator || creator.role !== AdminRole.ROOT || !creator.isActive) {
+        invitation.status = AdminInvitationStatus.REVOKED;
+        await this.invitationRepo.save(invitation);
+        throw new ForbiddenException(
+          "La invitación quedó inválida: quien la creó ya no es ROOT activo. Solicita una nueva invitación a otra cuenta ROOT.",
+        );
+      }
+    }
+
     const account = this.accountRepo.create({
       username: invitation.username,
       displayName: invitation.displayName,
       passwordHash,
-      role: AdminRole.ADMIN,
+      role: invitation.targetRole,
       isActive: true,
       tokenVersion: 1,
-      assignedChurchId: invitation.assignedChurchId,
-      // Aplicamos permisos globales pre-asignados (puede estar vacío).
-      globalPermissions: invitation.globalPermissions ?? [],
+      // ROOT no se ata a una iglesia. ADMIN sí.
+      assignedChurchId:
+        invitation.targetRole === AdminRole.ROOT
+          ? null
+          : invitation.assignedChurchId,
+      // Permisos globales: para ROOT quedan vacíos porque tiene todos por
+      // construcción (la lógica de permisos en PermissionsService ya lo
+      // resuelve via isRoot()). Para ADMIN aplicamos los pre-asignados.
+      globalPermissions:
+        invitation.targetRole === AdminRole.ROOT
+          ? []
+          : invitation.globalPermissions ?? [],
     });
     const saved = await this.accountRepo.save(account);
 
-    // Crear la asignación admin↔iglesia con los permisos del template.
-    await this.assignmentRepo.save(
-      this.assignmentRepo.create({
-        adminAccountId: saved.id,
-        churchId: invitation.assignedChurchId,
-        permissions:
-          invitation.churchPermissions && invitation.churchPermissions.length > 0
-            ? invitation.churchPermissions
-            : [...ALL_CHURCH_PERMISSIONS],
-      }),
-    );
+    // Para ADMIN creamos la asignación admin↔iglesia con los permisos del
+    // template. Para ROOT no creamos asignación: el resolver de permisos
+    // ya devuelve "puede todo" para ROOT en cualquier iglesia.
+    if (
+      invitation.targetRole === AdminRole.ADMIN &&
+      invitation.assignedChurchId
+    ) {
+      await this.assignmentRepo.save(
+        this.assignmentRepo.create({
+          adminAccountId: saved.id,
+          churchId: invitation.assignedChurchId,
+          permissions:
+            invitation.churchPermissions &&
+            invitation.churchPermissions.length > 0
+              ? invitation.churchPermissions
+              : [...ALL_CHURCH_PERMISSIONS],
+        }),
+      );
+    }
 
     invitation.status = AdminInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();

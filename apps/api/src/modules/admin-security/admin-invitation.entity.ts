@@ -11,6 +11,7 @@ import type {
   ChurchPermission,
   GlobalPermission,
 } from "./permissions/permission.enums";
+import { AdminRole } from "./enums/admin-role.enum";
 
 export enum AdminInvitationStatus {
   PENDING = "PENDING",
@@ -41,9 +42,29 @@ export class AdminInvitation {
   @Column({ type: "text" })
   displayName!: string;
 
-  /** Iglesia que el admin podrá administrar. */
-  @Column({ type: "uuid" })
-  assignedChurchId!: string;
+  /**
+   * Rol con el que se creará la cuenta al aceptar. Por defecto ADMIN.
+   * Si es ROOT, `assignedChurchId` puede ser null (un ROOT no se ata a una
+   * iglesia: tiene acceso a todas por definición) y no se crea ningún
+   * AdminChurchAssignment al aceptar — el sistema "reserva" la cuenta ROOT
+   * que ESE token específico va a crear.
+   *
+   * Crear una invitación con targetRole=ROOT requiere que el actor también
+   * sea ROOT (la cadena de confianza se mantiene cerrada ROOT→ROOT).
+   */
+  @Column({
+    type: "enum",
+    enum: AdminRole,
+    default: AdminRole.ADMIN,
+  })
+  targetRole!: AdminRole;
+
+  /**
+   * Iglesia que el admin podrá administrar. Obligatoria para invitaciones
+   * ADMIN; nullable para invitaciones ROOT.
+   */
+  @Column({ type: "uuid", nullable: true })
+  assignedChurchId!: string | null;
 
   /**
    * Permisos por iglesia pre-asignados. Se aplican al aceptar la

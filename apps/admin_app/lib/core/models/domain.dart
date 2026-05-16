@@ -341,6 +341,7 @@ class InvitationPreview {
   final String status; // 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED'
   final String? username;
   final String? displayName;
+  final String? targetRole; // 'ROOT' | 'ADMIN' | null si la invitación no es válida
   final String? churchName;
   final DateTime? expiresAt;
 
@@ -349,6 +350,7 @@ class InvitationPreview {
     required this.status,
     this.username,
     this.displayName,
+    this.targetRole,
     this.churchName,
     this.expiresAt,
   });
@@ -359,6 +361,7 @@ class InvitationPreview {
         status: j['status'] as String? ?? 'EXPIRED',
         username: j['username'] as String?,
         displayName: j['displayName'] as String?,
+        targetRole: j['targetRole'] as String?,
         churchName: j['churchName'] as String?,
         expiresAt: j['expiresAt'] != null
             ? DateTime.tryParse(j['expiresAt'] as String)
@@ -372,7 +375,8 @@ class AdminInvitation {
   final String id;
   final String username;
   final String displayName;
-  final String assignedChurchId;
+  final String targetRole; // 'ROOT' | 'ADMIN'
+  final String? assignedChurchId; // null para invitaciones ROOT
   final String? assignedChurchName;
   final String status; // PENDING | ACCEPTED | REVOKED | EXPIRED
   final DateTime expiresAt;
@@ -383,6 +387,7 @@ class AdminInvitation {
     required this.id,
     required this.username,
     required this.displayName,
+    required this.targetRole,
     required this.assignedChurchId,
     required this.assignedChurchName,
     required this.status,
@@ -395,7 +400,8 @@ class AdminInvitation {
         id: j['id'] as String,
         username: j['username'] as String? ?? '',
         displayName: j['displayName'] as String? ?? '',
-        assignedChurchId: j['assignedChurchId'] as String? ?? '',
+        targetRole: j['targetRole'] as String? ?? 'ADMIN',
+        assignedChurchId: j['assignedChurchId'] as String?,
         assignedChurchName: j['assignedChurchName'] as String?,
         status: j['status'] as String? ?? 'EXPIRED',
         expiresAt: DateTime.tryParse(j['expiresAt'] as String? ?? '') ??
@@ -413,7 +419,8 @@ class CreatedInvitation {
   final String token; // sólo se devuelve UNA vez, al crear
   final String username;
   final String displayName;
-  final String assignedChurchId;
+  final String targetRole;
+  final String? assignedChurchId;
   final DateTime expiresAt;
 
   CreatedInvitation({
@@ -421,6 +428,7 @@ class CreatedInvitation {
     required this.token,
     required this.username,
     required this.displayName,
+    required this.targetRole,
     required this.assignedChurchId,
     required this.expiresAt,
   });
@@ -431,7 +439,8 @@ class CreatedInvitation {
         token: j['token'] as String? ?? '',
         username: j['username'] as String? ?? '',
         displayName: j['displayName'] as String? ?? '',
-        assignedChurchId: j['assignedChurchId'] as String? ?? '',
+        targetRole: j['targetRole'] as String? ?? 'ADMIN',
+        assignedChurchId: j['assignedChurchId'] as String?,
         expiresAt: DateTime.tryParse(j['expiresAt'] as String? ?? '') ??
             DateTime.now(),
       );
