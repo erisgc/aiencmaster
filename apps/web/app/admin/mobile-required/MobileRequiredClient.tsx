@@ -7,15 +7,18 @@ import { useMemo } from 'react';
 import styles from './page.module.css';
 
 /**
- * URL del APK firmado. Se sirve desde:
- *   - Variable de entorno NEXT_PUBLIC_AIENC_APK_URL (recomendado)
- *   - O fallback: /downloads/aienc-admin.apk (estático en /public)
+ * URL del APK firmado. Resolución por prioridad:
+ *   1. NEXT_PUBLIC_AIENC_APK_URL si está definida y no vacía
+ *   2. Fallback hardcoded al "latest release" del repo en GitHub Releases
+ *      (URL evergreen que GitHub mantiene apuntando al release más reciente)
  *
- * Cuando todavía no esté disponible el APK final, el botón sigue presente
- * pero el href apuntará al fallback estático para que sea fácil de actualizar.
+ * Usamos || (no ??) y .trim() para que un string vacío también caiga al
+ * fallback. Previene que una env var mal configurada (valor "") rompa la
+ * descarga.
  */
 const APK_URL =
-  process.env.NEXT_PUBLIC_AIENC_APK_URL ?? '/downloads/aienc-admin.apk';
+  process.env.NEXT_PUBLIC_AIENC_APK_URL?.trim() ||
+  'https://github.com/ErisGC/AIENCMASTER/releases/latest/download/aienc-admin.apk';
 
 /**
  * Deep-link al esquema custom de la app Android para arrancarla con el token
