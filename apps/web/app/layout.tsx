@@ -33,8 +33,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${fraunces.variable} ${inter.variable}`}>
+    <html
+      lang="es"
+      className={`${fraunces.variable} ${inter.variable}`}
+      suppressHydrationWarning
+    >
       <body className="antialiased">
+        {/* Marca el documento como "con JS" lo antes posible. Si JS no corre,
+            el CSS (html:not(.js)) revela el contenido [data-reveal] de una vez. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
         <PublicShell>{children}</PublicShell>
       </body>
     </html>

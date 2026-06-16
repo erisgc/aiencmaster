@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -59,6 +59,17 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme('theme:public', 'light');
   const isClient = useIsClient();
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const wasOpenRef = useRef(false);
+
+  // Al cerrar el menú móvil, devolver el foco al botón que lo abrió (a11y).
+  // El guard evita robar el foco en el montaje inicial.
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      menuBtnRef.current?.focus();
+    }
+    wasOpenRef.current = open;
+  }, [open]);
 
   const isAdmin = useMemo(() => pathname?.startsWith('/admin'), [pathname]);
 
@@ -71,9 +82,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, [isAdmin]);
 
-  // Cerrar el menú móvil al cambiar de ruta.
+  // Cerrar el menú móvil al cambiar de ruta. Sincronizar UI transitoria con la
+  // navegación (incluido back/forward del navegador) es un uso legítimo del
+  // efecto; el updater funcional hace bail-out cuando ya estaba cerrado.
   useEffect(() => {
-    setOpen(false);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen((current) => (current ? false : current));
   }, [pathname]);
 
   // Bloquear scroll del body con el menú móvil abierto.
@@ -153,6 +167,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             )}
 
             <button
+              ref={menuBtnRef}
               type="button"
               className={styles.menuBtn}
               onClick={() => setOpen((o) => !o)}
@@ -170,6 +185,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       {/* Menú móvil overlay a pantalla completa */}
       <div
         className={`${styles.mobileMenu} ${open ? styles.mobileOpen : ''}`}
+        role="dialog"
+        aria-modal={open}
+        aria-label="Menú de navegación"
         aria-hidden={!open}
       >
         <nav className={styles.mobileNav}>

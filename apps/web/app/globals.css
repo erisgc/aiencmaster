@@ -40,6 +40,7 @@
   --border-soft: rgba(15, 76, 129, 0.14);
   --border-strong: rgba(15, 76, 129, 0.22);
   --text-main: #0E1F33;
+  --text-primary: var(--text-main);
   --text-muted: rgba(14, 31, 51, 0.7);
   --text-soft: rgba(14, 31, 51, 0.54);
 
@@ -295,6 +296,18 @@ main {
 [data-reveal].is-revealed {
   opacity: 1;
   transform: none;
+}
+
+/*
+ * Fallback sin JavaScript: si el bundle no carga o JS está deshabilitado,
+ * ScrollReveal nunca corre. La clase `js` la añade un script inline en
+ * layout.tsx; sin ella, el contenido se muestra de inmediato (nunca queda
+ * invisible por culpa del reveal).
+ */
+html:not(.js) [data-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 /* Accesibilidad: sin animaciones si el usuario lo pide a nivel sistema. */

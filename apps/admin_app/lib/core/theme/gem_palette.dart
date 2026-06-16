@@ -11,15 +11,17 @@ class GemPalette {
   static const Color sapphire = Color(0xFF0F4C81);
   static const Color emerald = Color(0xFF0F7B6C);
   static const Color topaz = Color(0xFFD4A437);
-  static const Color amethyst = Color(0xFF7D4CDB);
-  static const Color ruby = Color(0xFFC0392B);
+  // Sincronizados con globals.css (--gem-amethyst / --gem-ruby, light) para
+  // que la app y la web se vean como el mismo producto.
+  static const Color amethyst = Color(0xFF7B3F99);
+  static const Color ruby = Color(0xFFB0274D);
 
   // Tonos suaves para fondos / chips (weak variants).
   static const Color sapphireWeak = Color(0x290F4C81); // 16% alpha
   static const Color emeraldWeak = Color(0x290F7B6C);
   static const Color topazWeak = Color(0x29D4A437);
-  static const Color amethystWeak = Color(0x297D4CDB);
-  static const Color rubyWeak = Color(0x29C0392B);
+  static const Color amethystWeak = Color(0x297B3F99);
+  static const Color rubyWeak = Color(0x29B0274D);
 
   // Surface / background neutros (dark mode primero).
   static const Color background = Color(0xFF0B1220);
