@@ -68,20 +68,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Resumen ${DateFormat('MMM yyyy', 'es').format(_from)} – ${DateFormat('MMM yyyy', 'es').format(_to)}',
-                  style: Theme.of(context).textTheme.titleMedium,
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 18, 10, 18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  GemPalette.sapphire.withValues(alpha: 0.32),
+                  GemPalette.emerald.withValues(alpha: 0.14),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: GemPalette.borderSoft.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'PANEL',
+                        style: TextStyle(
+                          color: GemPalette.textMuted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          letterSpacing: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Resumen',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${DateFormat('MMM yyyy', 'es').format(_from)} – ${DateFormat('MMM yyyy', 'es').format(_to)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.tune_outlined),
-                onPressed: _pickRange,
-                tooltip: 'Rango de fechas',
-              ),
-            ],
+                IconButton(
+                  icon: const Icon(Icons.tune_outlined),
+                  onPressed: _pickRange,
+                  tooltip: 'Rango de fechas',
+                ),
+              ],
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),

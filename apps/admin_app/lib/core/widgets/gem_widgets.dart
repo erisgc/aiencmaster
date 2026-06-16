@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/gem_palette.dart';
 
 /// Tarjeta con borde gradient + fondo surface. Equivale al `.formCard` /
-/// `.listCard` de la web.
-class GemCard extends StatelessWidget {
+/// `.listCard` de la web. Si recibe onTap, añade una micro-interacción de
+/// press-scale (escala sutil al presionar) para dar feedback táctil.
+class GemCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final bool gradientBorder;
@@ -21,12 +22,19 @@ class GemCard extends StatelessWidget {
   });
 
   @override
+  State<GemCard> createState() => _GemCardState();
+}
+
+class _GemCardState extends State<GemCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final card = Container(
       decoration: BoxDecoration(
         gradient: GemPalette.surfaceGradient,
         borderRadius: BorderRadius.circular(22),
-        border: gradientBorder
+        border: widget.gradientBorder
             ? null
             : Border.all(color: GemPalette.borderSoft, width: 1),
         boxShadow: const [
@@ -37,45 +45,55 @@ class GemCard extends StatelessWidget {
           ),
         ],
       ),
-      padding: padding,
-      child: child,
+      padding: widget.padding,
+      child: widget.child,
     );
 
-    if (!gradientBorder) {
-      return _wrapTap(card);
-    }
-
-    final stroke = ShaderMask(
-      shaderCallback: (rect) =>
-          (borderGradient ?? GemPalette.primaryGradient).createShader(rect),
-      blendMode: BlendMode.srcIn,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(width: 1, color: Colors.white.withValues(alpha: 0.6)),
+    final Widget content;
+    if (!widget.gradientBorder) {
+      content = card;
+    } else {
+      final stroke = ShaderMask(
+        shaderCallback: (rect) =>
+            (widget.borderGradient ?? GemPalette.primaryGradient)
+                .createShader(rect),
+        blendMode: BlendMode.srcIn,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border:
+                Border.all(width: 1, color: Colors.white.withValues(alpha: 0.6)),
+          ),
         ),
-      ),
-    );
-
-    return _wrapTap(
-      Stack(
+      );
+      content = Stack(
         children: [
           card,
           Positioned.fill(child: IgnorePointer(child: stroke)),
         ],
-      ),
-    );
+      );
+    }
+
+    return _wrapTap(content);
   }
 
   Widget _wrapTap(Widget child) {
-    if (onTap == null) return child;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
+    if (widget.onTap == null) return child;
+    return AnimatedScale(
+      scale: _pressed ? 0.98 : 1,
+      duration: const Duration(milliseconds: 130),
+      curve: Curves.easeOut,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: child,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: widget.onTap,
+          onHighlightChanged: (h) {
+            if (mounted) setState(() => _pressed = h);
+          },
+          child: child,
+        ),
       ),
     );
   }

@@ -128,9 +128,15 @@ class AppTheme {
       displayColor: GemPalette.textPrimary,
     ).copyWith(
       displayLarge: const TextStyle(
-        fontSize: 32,
+        fontSize: 38,
         fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
+        letterSpacing: -0.8,
+        height: 1.02,
+      ),
+      headlineMedium: const TextStyle(
+        fontSize: 27,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.4,
       ),
       headlineSmall: const TextStyle(
         fontSize: 22,
@@ -138,8 +144,9 @@ class AppTheme {
         letterSpacing: -0.2,
       ),
       titleLarge: const TextStyle(
-        fontSize: 18,
+        fontSize: 19,
         fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
       ),
       titleMedium: const TextStyle(
         fontSize: 15,

@@ -9,8 +9,41 @@ import '../features/auth/setup_lock_screen.dart';
 import '../features/churches/church_edit_screen.dart';
 import '../features/reports/new_report_screen.dart';
 import '../features/shell/home_shell.dart';
+import 'theme/gem_palette.dart';
 import 'state/auth_state.dart';
 import 'state/locator.dart';
+
+/// Página con transición fade + slide-up suave. Da el "flujo" cinematográfico
+/// al moverse entre pantallas sin alterar el destino ni la lógica del router.
+/// Respeta MediaQuery.disableAnimations (accesibilidad).
+CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 320),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (context, animation, secondary, child) {
+      final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      if (reduce) return child;
+
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.018),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 GoRouter buildRouter() {
   return GoRouter(
@@ -42,38 +75,100 @@ GoRouter buildRouter() {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const _Splash()),
-      GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(
+        path: '/splash',
+        pageBuilder: (_, state) => _page(state, const _Splash()),
+      ),
+      GoRoute(
+        path: '/welcome',
+        pageBuilder: (_, state) => _page(state, const WelcomeScreen()),
+      ),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (_, state) => _page(state, const LoginScreen()),
+      ),
       GoRoute(
         path: '/invite',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final token = state.uri.queryParameters['token'];
-          return InviteScreen(initialToken: token);
+          return _page(state, InviteScreen(initialToken: token));
         },
       ),
-      GoRoute(path: '/lock', builder: (_, __) => const LockScreen()),
       GoRoute(
-          path: '/setup-lock',
-          builder: (_, __) => const SetupLockScreen()),
-      GoRoute(path: '/', builder: (_, __) => const HomeShell()),
+        path: '/lock',
+        pageBuilder: (_, state) => _page(state, const LockScreen()),
+      ),
+      GoRoute(
+        path: '/setup-lock',
+        pageBuilder: (_, state) => _page(state, const SetupLockScreen()),
+      ),
+      GoRoute(
+        path: '/',
+        pageBuilder: (_, state) => _page(state, const HomeShell()),
+      ),
       GoRoute(
         path: '/reports/new',
-        builder: (_, __) => const NewReportScreen(),
+        pageBuilder: (_, state) => _page(state, const NewReportScreen()),
       ),
       GoRoute(
         path: '/churches/:id/edit',
-        builder: (_, state) =>
-            ChurchEditScreen(churchId: state.pathParameters['id']!),
+        pageBuilder: (_, state) => _page(
+          state,
+          ChurchEditScreen(churchId: state.pathParameters['id']!),
+        ),
       ),
     ],
   );
 }
 
+/// Splash con marca: logo "A" sobre gradiente de gemas + loader sutil.
 class _Splash extends StatelessWidget {
   const _Splash();
+
   @override
-  Widget build(BuildContext context) => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                gradient: GemPalette.primaryGradient,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: GemPalette.sapphire.withValues(alpha: 0.4),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'A',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 46,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation(GemPalette.emerald),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
