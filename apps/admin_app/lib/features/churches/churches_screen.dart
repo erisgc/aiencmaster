@@ -45,10 +45,9 @@ class _ChurchesScreenState extends State<ChurchesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text('Iglesias',
-              style: Theme.of(context).textTheme.headlineSmall),
+        const GemSectionHeader(
+          eyebrow: 'Directorio',
+          title: 'Iglesias',
         ),
         Expanded(
           child: _loading

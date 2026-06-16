@@ -99,6 +99,81 @@ class _GemCardState extends State<GemCard> {
   }
 }
 
+/// Header de sección con banda de gradiente de gemas. Unifica el encabezado
+/// de todas las pantallas principales (Métricas, Anuncios, Iglesias, Informes,
+/// Seguridad) con el mismo lenguaje visual del portal web.
+class GemSectionHeader extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final EdgeInsetsGeometry margin;
+
+  const GemSectionHeader({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.margin = const EdgeInsets.fromLTRB(16, 16, 16, 8),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin,
+      padding: const EdgeInsets.fromLTRB(18, 16, 10, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            GemPalette.sapphire.withValues(alpha: 0.32),
+            GemPalette.emerald.withValues(alpha: 0.14),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: GemPalette.borderSoft.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow.toUpperCase(),
+                  style: const TextStyle(
+                    color: GemPalette.textMuted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
 /// Botón principal con gradient gemas.
 class GemPrimaryButton extends StatelessWidget {
   final String label;

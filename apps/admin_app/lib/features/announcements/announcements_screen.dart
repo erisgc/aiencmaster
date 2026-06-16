@@ -157,11 +157,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen>
       children: [
         Column(
           children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              alignment: Alignment.centerLeft,
-              child: Text('Anuncios',
-                  style: Theme.of(context).textTheme.headlineSmall),
+            const GemSectionHeader(
+              eyebrow: 'Actualidad',
+              title: 'Anuncios',
             ),
             TabBar(
               controller: _tabs,

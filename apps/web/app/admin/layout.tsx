@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -148,7 +149,21 @@ export default function AdminLayout({
       >
         <div className={styles.sidebarTop}>
           <div className={styles.sidebarHeader}>
-            <h3>Panel admin</h3>
+            <div className={styles.brandLockup}>
+              <span className={styles.brandLogo}>
+                <Image
+                  src="/Logoaienc.png"
+                  alt="AIENC"
+                  width={34}
+                  height={34}
+                  style={{ objectFit: 'contain' }}
+                />
+              </span>
+              <div className={styles.brandText}>
+                <h3>AIENC</h3>
+                <span className={styles.brandKicker}>Panel administrativo</span>
+              </div>
+            </div>
             <button
               type="button"
               className={styles.sidebarClose}

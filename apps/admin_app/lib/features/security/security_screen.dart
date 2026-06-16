@@ -48,44 +48,37 @@ class _SecurityScreenState extends State<SecurityScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text('Seguridad',
-                    style: Theme.of(context).textTheme.headlineSmall),
-              ),
-              IconButton(
-                tooltip: 'Cerrar sesión',
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Cerrar sesión'),
-                      content: const Text(
-                          '¿Seguro que quieres salir? Tendrás que volver a iniciar sesión.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Salir'),
-                        ),
-                      ],
+        GemSectionHeader(
+          eyebrow: 'Acceso',
+          title: 'Seguridad',
+          trailing: IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Cerrar sesión'),
+                  content: const Text(
+                      '¿Seguro que quieres salir? Tendrás que volver a iniciar sesión.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancelar'),
                     ),
-                  );
-                  if (ok == true) {
-                    await Locator.authState.signOut();
-                    if (!context.mounted) return;
-                    context.go('/welcome');
-                  }
-                },
-              ),
-            ],
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Salir'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) {
+                await Locator.authState.signOut();
+                if (!context.mounted) return;
+                context.go('/welcome');
+              }
+            },
           ),
         ),
         Expanded(

@@ -49,10 +49,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text('Informes',
-              style: Theme.of(context).textTheme.headlineSmall),
+        const GemSectionHeader(
+          eyebrow: 'Finanzas',
+          title: 'Informes',
         ),
         SizedBox(
           height: 44,
