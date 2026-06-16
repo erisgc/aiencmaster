@@ -24,7 +24,7 @@ export default async function AnnouncementsPage() {
 
   return (
     <main className={styles.page}>
-      <section className={styles.hero}>
+      <section className={styles.hero} data-reveal>
         <div className={styles.heroCopy}>
           <span className={styles.eyebrow}>Actualidad institucional</span>
           <h1 className={styles.title}>Anuncios y publicaciones</h1>

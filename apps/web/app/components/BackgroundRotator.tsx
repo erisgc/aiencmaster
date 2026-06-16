@@ -9,7 +9,16 @@ import {
 
 import styles from './BackgroundRotator.module.css';
 
-export function BackgroundRotator() {
+type Variant = 'fixed' | 'hero';
+
+/**
+ * Rotador de fondos configurable por el ROOT.
+ * - variant="fixed" (default): fondo fijo a pantalla completa (comportamiento original).
+ * - variant="hero": se posiciona dentro de un contenedor relativo (el hero) y
+ *   usa un velo cinematográfico oscuro pensado para texto claro encima.
+ * La lógica de fetch/rotación/responsive es idéntica en ambas variantes.
+ */
+export function BackgroundRotator({ variant = 'fixed' }: { variant?: Variant }) {
   const [data, setData] = useState<PublicBackgroundsResponse | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -53,9 +62,12 @@ export function BackgroundRotator() {
     return null;
   }
 
+  const containerClass = variant === 'hero' ? styles.hero : styles.backdrop;
+  const tintClass = variant === 'hero' ? styles.heroTint : styles.tint;
+
   return (
     <div
-      className={styles.backdrop}
+      className={containerClass}
       aria-hidden
       style={{
         ['--fade' as string]: `${data.fadeSeconds}s`,
@@ -71,7 +83,7 @@ export function BackgroundRotator() {
           />
         );
       })}
-      <div className={styles.tint} />
+      <div className={tintClass} />
     </div>
   );
 }

@@ -11,7 +11,7 @@ export default function InfoPage() {
   return (
     <main className={styles.container}>
       {/* ─── Hero ─── */}
-      <header className={styles.header}>
+      <header className={styles.header} data-reveal>
         <h1 className={styles.title}>Información institucional</h1>
         <p className={styles.subtitle}>
           Historia, objetivos, credo y datos de contacto de la Asociación de
@@ -133,7 +133,7 @@ export default function InfoPage() {
       </section>
 
       {/* ─── Credo ─── */}
-      <section className={styles.credoSection}>
+      <section className={styles.credoSection} data-reveal>
         <div className={styles.credoHeader}>
           <div className={styles.sectionLabel}>Doctrina</div>
           <h2 className={styles.credoTitle}>Credo de la Iglesia AIENC</h2>

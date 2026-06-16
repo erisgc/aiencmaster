@@ -1,91 +1,119 @@
 import Link from 'next/link';
 
 import { getLatestAnnouncements } from './lib/announcements';
+import { getPublicChurches } from './lib/churches';
 import { AnnouncementsCarousel } from './components/AnnouncementsCarousel';
+import { BackgroundRotator } from './components/BackgroundRotator';
+import { ChurchCard } from './components/ChurchCard';
 import styles from './page.module.css';
 
 export default async function HomePage() {
   const announcements = await getLatestAnnouncements();
 
+  let previewChurches: Awaited<ReturnType<typeof getPublicChurches>> = [];
+  try {
+    const churches = await getPublicChurches();
+    previewChurches = churches.slice(0, 3);
+  } catch {
+    previewChurches = [];
+  }
+
   return (
     <main className={styles.page}>
+      {/* ─────────────────  HERO CINEMATOGRÁFICO  ───────────────── */}
       <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <h1 className={styles.brandTitle}>AIENC</h1>
-          <p className={styles.brandSubtitle}>
+        <BackgroundRotator variant="hero" />
+
+        <div className={styles.heroInner}>
+          <span className={styles.heroEyebrow}>
             Asociación de Iglesias Evangélicas del Norte de Colombia
+          </span>
+          <h1 className={styles.heroTitle}>AIENC</h1>
+          <p className={styles.heroLead}>
+            El portal oficial de nuestra comunidad de fe. Anuncios, información
+            institucional e iglesias asociadas, en un solo lugar.
           </p>
 
-          <p className={styles.lead}>
-            Consulta anuncios recientes y accede a información institucional
-            desde una interfaz más sólida y profesional.
-          </p>
-
-          <div className={styles.actions}>
+          <div className={styles.heroActions}>
             <Link href="/announcements" className={styles.primaryAction}>
               Ver anuncios
             </Link>
             <Link href="/info" className={styles.secondaryAction}>
-              Información
+              Conócenos
             </Link>
           </div>
         </div>
 
-        <div className={styles.heroPanel}>
-          <div className={styles.metricCard}>
-            <span className={styles.metricLabel}>Anuncios recientes</span>
-            <strong className={styles.metricValue}>{announcements.length}</strong>
-            <p className={styles.metricText}>
-              Publicaciones destacadas cargadas desde el sistema actual.
-            </p>
-          </div>
+        <div className={styles.scrollHint} aria-hidden>
+          <span className={styles.scrollDot} />
+          <span className={styles.scrollText}>Desliza</span>
+        </div>
+      </section>
 
-          <div className={styles.metricCard}>
-            <span className={styles.metricLabel}>Plataforma oficial</span>
-            <strong className={styles.metricValue}>AIENC</strong>
-            <p className={styles.metricText}>
-              Comunicaciones verificadas por la administración de la Asociación.
-            </p>
+      {/* ─────────────────  BANDA: QUÉ ES ESTO  ───────────────── */}
+      <section className={styles.band} data-reveal>
+        <div className={styles.bandInner}>
+          <div className={styles.introGrid}>
+            <div>
+              <span className={styles.eyebrow}>Portal institucional</span>
+              <h2 className={styles.bandTitle}>
+                Una sola plataforma para toda la Asociación
+              </h2>
+            </div>
+            <div>
+              <p className={styles.bandText}>
+                La AIENC reúne a las iglesias evangélicas del norte de Colombia
+                bajo una identidad común. Este portal centraliza los comunicados
+                oficiales y la información institucional verificada por la
+                administración de la Asociación.
+              </p>
+              <Link href="/info" className={styles.textLink}>
+                Conoce nuestra historia →
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className={styles.featured}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <span className={styles.sectionEyebrow}>Contenido destacado</span>
-            <h2 className={styles.sectionTitle}>Últimos anuncios publicados</h2>
-          </div>
-          <p className={styles.sectionText}>
-            La vitrina principal del portal se enfoca en comunicados recientes
-            con una lectura más clara y un recorrido visual mejor definido.
-          </p>
-        </div>
-
-        <div className={styles.featuredGrid}>
-          <div className={styles.carouselPanel}>
-            <AnnouncementsCarousel announcements={announcements} />
-          </div>
-
-          <aside className={styles.sidePanel}>
-            <Link href="/info" className={styles.sideCard}>
-              <span className={styles.sideEyebrow}>Institucional</span>
-              <h3 className={styles.sideTitle}>Información general</h3>
-              <p className={styles.sideText}>
-                Datos base del proyecto, contacto y referencias institucionales.
-              </p>
+      {/* ─────────────────  BANDA: ÚLTIMOS ANUNCIOS  ───────────────── */}
+      <section className={`${styles.band} ${styles.bandAlt}`} data-reveal>
+        <div className={styles.bandInner}>
+          <header className={styles.bandHeader}>
+            <div>
+              <span className={styles.eyebrow}>Actualidad</span>
+              <h2 className={styles.bandTitle}>Últimos anuncios</h2>
+            </div>
+            <Link href="/announcements" className={styles.textLink}>
+              Ver todos →
             </Link>
+          </header>
 
-            <Link href="/announcements" className={styles.sideCard}>
-              <span className={styles.sideEyebrow}>Actualidad</span>
-              <h3 className={styles.sideTitle}>Todos los anuncios</h3>
-              <p className={styles.sideText}>
-                Listado completo de comunicados con filtros por título y fecha.
-              </p>
-            </Link>
-          </aside>
+          <AnnouncementsCarousel announcements={announcements} />
         </div>
       </section>
+
+      {/* ─────────────────  BANDA: IGLESIAS (condicional)  ───────────────── */}
+      {previewChurches.length > 0 && (
+        <section className={styles.band} data-reveal>
+          <div className={styles.bandInner}>
+            <header className={styles.bandHeader}>
+              <div>
+                <span className={styles.eyebrow}>Comunidad</span>
+                <h2 className={styles.bandTitle}>Iglesias asociadas</h2>
+              </div>
+              <Link href="/churches" className={styles.textLink}>
+                Ver todas →
+              </Link>
+            </header>
+
+            <div className={styles.churchGrid}>
+              {previewChurches.map((church) => (
+                <ChurchCard key={church.id} church={church} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

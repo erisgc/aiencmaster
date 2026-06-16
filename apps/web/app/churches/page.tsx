@@ -15,7 +15,7 @@ export default async function ChurchesPage() {
 
   return (
     <main className={styles.page}>
-      <section className={styles.hero}>
+      <section className={styles.hero} data-reveal>
         <div className={styles.heroCopy}>
           <span className={styles.eyebrow}>Directorio institucional</span>
           <h1 className={styles.title}>Iglesias asociadas</h1>
@@ -38,7 +38,7 @@ export default async function ChurchesPage() {
         </div>
       </section>
 
-      <section className={styles.grid}>
+      <section className={styles.grid} data-reveal>
         {churches.map((church) => (
           <ChurchCard key={church.id} church={church} />
         ))}

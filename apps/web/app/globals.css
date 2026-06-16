@@ -84,6 +84,29 @@
   --btn: var(--bg-surface-strong);
   --btn-hover: rgba(15, 76, 129, 0.08);
   --btn-border: rgba(15, 76, 129, 0.18);
+
+  /* Tipografía (cableada en layout.tsx vía next/font) */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+  /* Flujo cinematográfico — layout y motion */
+  --topnav-height: 72px;
+  --hero-vh: 90vh;
+  --band-max: 1240px;
+  --reveal-distance: 20px;
+  --reveal-duration: 620ms;
+
+  /* Overlay del hero: hunde la base para legibilidad sobre cualquier imagen */
+  --gradient-hero-overlay:
+    linear-gradient(
+      180deg,
+      rgba(8, 22, 40, 0.28) 0%,
+      rgba(8, 22, 40, 0.16) 34%,
+      rgba(8, 22, 40, 0.55) 78%,
+      rgba(8, 22, 40, 0.82) 100%
+    );
+  /* Fondo de la top-nav cuando ya se hizo scroll (estado sólido) */
+  --topnav-bg-scrolled: rgba(255, 255, 255, 0.86);
 }
 
 :root[data-theme="dark"] {
@@ -154,6 +177,9 @@
   --btn: rgba(255, 255, 255, 0.06);
   --btn-hover: rgba(111, 168, 220, 0.12);
   --btn-border: rgba(220, 232, 250, 0.18);
+
+  /* Top-nav sólida en dark */
+  --topnav-bg-scrolled: rgba(8, 18, 31, 0.86);
 }
 
 * {
@@ -167,11 +193,10 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  /* El fondo "tipo gemas" se mantiene como base; las vistas públicas
-     superponen la imagen del cielo desde PublicShell. */
+  /* Fondo base "tipo gemas". El hero de la home superpone el BackgroundRotator. */
   background: var(--bg-main);
   color: var(--text-main);
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -210,23 +235,30 @@ h5,
 h6 {
   margin: 0;
   color: var(--text-main);
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+}
+
+/* Titulares con el display serif (Fraunces); cuerpo queda en sans */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 h1 {
-  font-size: clamp(2.45rem, 4vw, 4.4rem);
-  font-weight: 800;
+  font-size: clamp(2.6rem, 4.4vw, 4.8rem);
+  font-weight: 600;
 }
 
 h2 {
-  font-size: clamp(1.7rem, 2.5vw, 2.7rem);
-  font-weight: 760;
+  font-size: clamp(1.85rem, 2.7vw, 2.9rem);
+  font-weight: 600;
 }
 
 h3 {
-  font-size: clamp(1.15rem, 1.5vw, 1.45rem);
-  font-weight: 700;
+  font-size: clamp(1.2rem, 1.6vw, 1.55rem);
+  font-weight: 600;
 }
 
 p {
@@ -243,4 +275,38 @@ main {
   --rdp-accent-color: var(--color-primary);
   --rdp-accent-background-color: var(--color-primary-soft);
   --rdp-day_button-border-radius: 10px;
+}
+
+/*
+ * Scroll-reveal global. Cualquier elemento con [data-reveal] entra con un
+ * fade + slide-up cuando aparece en viewport (lo activa ScrollReveal.tsx,
+ * que añade .is-revealed). Se puede escalonar con [data-reveal-delay].
+ */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance));
+  transition:
+    opacity var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--reveal-duration) cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Accesibilidad: sin animaciones si el usuario lo pide a nivel sistema. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  [data-reveal],
+  [data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

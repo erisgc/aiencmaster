@@ -6,6 +6,15 @@
   overflow: hidden;
 }
 
+/* Variante hero: llena el contenedor relativo del hero (no fixed). */
+.hero {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .layer {
   position: absolute;
   inset: 0;
@@ -40,4 +49,24 @@
     radial-gradient(circle at 82% 18%, rgba(60, 179, 154, 0.18), transparent 30%),
     radial-gradient(circle at 50% 110%, rgba(232, 196, 107, 0.14), transparent 36%),
     linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 78%, transparent), color-mix(in srgb, var(--bg-main) 94%, transparent) 70%);
+}
+
+/*
+ * Velo del hero: oscurece de forma cinematográfica para texto CLARO encima.
+ * Mantiene un toque de la paleta gema arriba y hunde la base.
+ */
+.heroTint {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 16% 10%, rgba(15, 76, 129, 0.30), transparent 36%),
+    radial-gradient(circle at 84% 14%, rgba(15, 123, 108, 0.24), transparent 34%),
+    var(--gradient-hero-overlay);
+}
+
+:root[data-theme="dark"] .heroTint {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(111, 168, 220, 0.26), transparent 36%),
+    radial-gradient(circle at 84% 14%, rgba(60, 179, 154, 0.22), transparent 34%),
+    var(--gradient-hero-overlay);
 }
