@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/models/domain.dart';
@@ -9,7 +10,23 @@ import '../../core/theme/gem_palette.dart';
 import '../../core/widgets/gem_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({
+    super.key,
+    this.showcaseKey,
+    this.coachCard,
+    this.onReplayTutorial,
+  });
+
+  /// Clave del spotlight del tutorial sobre la cabecera del panel. Si es null,
+  /// la cabecera se renderiza sin envoltura de showcase.
+  final GlobalKey? showcaseKey;
+
+  /// Tarjeta del recorrido que se muestra al iluminar la cabecera. La arma el
+  /// HomeShell (consciente de rol e iglesia) para centralizar el texto.
+  final Widget? coachCard;
+
+  /// Reinvoca el tutorial manualmente (botón de ayuda de la cabecera).
+  final VoidCallback? onReplayTutorial;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -68,18 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
         children: [
-          GemSectionHeader(
-            eyebrow: 'Panel',
-            title: 'Resumen',
-            subtitle:
-                '${DateFormat('MMM yyyy', 'es').format(_from)} – ${DateFormat('MMM yyyy', 'es').format(_to)}',
-            margin: EdgeInsets.zero,
-            trailing: IconButton(
-              icon: const Icon(Icons.tune_outlined),
-              onPressed: _pickRange,
-              tooltip: 'Rango de fechas',
-            ),
-          ),
+          _buildHeader(context),
           if (_error != null) ...[
             const SizedBox(height: 8),
             GemErrorBanner(message: _error!),
@@ -170,6 +176,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final hasReplay = widget.onReplayTutorial != null;
+    final header = GemSectionHeader(
+      eyebrow: 'Panel',
+      title: 'Resumen',
+      subtitle:
+          '${DateFormat('MMM yyyy', 'es').format(_from)} – ${DateFormat('MMM yyyy', 'es').format(_to)}',
+      margin: EdgeInsets.zero,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasReplay)
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: widget.onReplayTutorial,
+              tooltip: 'Ver el tutorial',
+            ),
+          IconButton(
+            icon: const Icon(Icons.tune_outlined),
+            onPressed: _pickRange,
+            tooltip: 'Rango de fechas',
+          ),
+        ],
+      ),
+    );
+
+    if (widget.showcaseKey != null && widget.coachCard != null) {
+      return Showcase.withWidget(
+        key: widget.showcaseKey!,
+        height: 280,
+        width: MediaQuery.of(context).size.width - 32,
+        container: widget.coachCard!,
+        child: header,
+      );
+    }
+    return header;
   }
 
   Widget _emptyChart() => const Center(

@@ -2,7 +2,7 @@ name: admin_app
 description: "AIENC Admin - Panel administrativo movil"
 publish_to: 'none'
 
-version: 0.1.3+4
+version: 0.1.4+5
 
 environment:
   sdk: ^3.11.1
@@ -18,6 +18,9 @@ dependencies:
   # Hash del PIN local (SHA-256 salado e iterado). Puro Dart, sin deps
   # nativas (no arrastra el problema de win32/path con espacios).
   crypto: ^3.0.6
+
+  # Tutorial guiado (coachmarks con spotlight). Puro Dart.
+  showcaseview: ^3.0.0
 
   # HTTP + cookies persistentes (necesario para hablar con el backend
   # que entrega cookies HttpOnly admin_session y admin_device).
