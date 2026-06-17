@@ -252,4 +252,11 @@
   .secondaryAction {
     flex: 1 1 auto;
   }
+
+  /* La pista "Desliza" (indicador de scroll, posicionada absolute al fondo
+     del hero) se superpone con los botones en viewports estrechos. Es
+     puramente decorativa, así que la ocultamos en móvil. */
+  .scrollHint {
+    display: none;
+  }
 }
