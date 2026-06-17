@@ -19,7 +19,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { AdminAccount } from './admin-account.entity';
 import { AdminChurchAssignment } from './admin-church-assignment.entity';
@@ -68,6 +68,27 @@ describe('AdminInvitationsService — cadena ROOT', () => {
       name: 'Iglesia Demo',
     } as Church);
 
+    // accept() corre dentro de this.dataSource.transaction(level, cb) usando
+    // manager.getRepository(...). Mockeamos el DataSource para que el manager
+    // devuelva los mismos repos mock y la transacción ejecute el callback.
+    const managerMock = {
+      getRepository: (entity: unknown) => {
+        if (entity === AdminInvitation) return invitationRepo;
+        if (entity === AdminAccount) return accountRepo;
+        if (entity === AdminChurchAssignment) return assignmentRepo;
+        if (entity === Church) return churchRepo;
+        return repoMock();
+      },
+    };
+    const dataSourceMock = {
+      transaction: jest.fn((arg1: unknown, arg2?: unknown) => {
+        const cb = (typeof arg1 === 'function' ? arg1 : arg2) as (
+          m: typeof managerMock,
+        ) => unknown;
+        return cb(managerMock);
+      }),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         AdminInvitationsService,
@@ -78,6 +99,7 @@ describe('AdminInvitationsService — cadena ROOT', () => {
           provide: getRepositoryToken(AdminChurchAssignment),
           useValue: assignmentRepo,
         },
+        { provide: DataSource, useValue: dataSourceMock },
       ],
     }).compile();
     service = moduleRef.get(AdminInvitationsService);

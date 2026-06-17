@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from "bcryptjs";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 
 import { Church } from "../churches/church.entity";
 import { AdminAccount } from "./admin-account.entity";
@@ -78,6 +78,7 @@ export class AdminInvitationsService {
     private readonly churchRepo: Repository<Church>,
     @InjectRepository(AdminChurchAssignment)
     private readonly assignmentRepo: Repository<AdminChurchAssignment>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(input: CreateInvitationInput): Promise<InvitationWithToken> {
@@ -298,94 +299,111 @@ export class AdminInvitationsService {
     }
 
     const tokenHash = hashToken(token);
-    const invitation = await this.invitationRepo.findOne({
-      where: { tokenHash },
-    });
-    if (!invitation) {
-      throw new NotFoundException("Invitación inválida");
-    }
-    if (invitation.status !== AdminInvitationStatus.PENDING) {
-      throw new BadRequestException("La invitación ya no está disponible");
-    }
-    if (invitation.expiresAt < new Date()) {
-      invitation.status = AdminInvitationStatus.EXPIRED;
-      await this.invitationRepo.save(invitation);
-      throw new BadRequestException("La invitación ha expirado");
-    }
-
-    const existing = await this.accountRepo.findOne({
-      where: { username: invitation.username },
-    });
-    if (existing) {
-      throw new ConflictException("El nombre de usuario ya está en uso");
-    }
-
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Si la invitación es para ROOT, comprobamos UNA VEZ MÁS que el actor
-    // que la creó sigue siendo ROOT activo en este instante. Esto cierra
-    // una posible ventana donde se invita a una nueva ROOT, se desactiva
-    // o degrada al creador, y aún se intenta aceptar.
-    if (invitation.targetRole === AdminRole.ROOT) {
-      const creator = await this.accountRepo.findOne({
-        where: { id: invitation.createdByAdminAccountId },
+    /*
+     * Toda la aceptación corre en una transacción SERIALIZABLE con lock
+     * pesimista sobre la fila de la invitación. Esto garantiza:
+     *  - Consumo ÚNICO del token: dos peticiones simultáneas con el mismo
+     *    token se serializan; la segunda ve status != PENDING y aborta
+     *    (no se crean dos cuentas).
+     *  - Atomicidad: cuenta + asignación de iglesia + marca ACCEPTED se
+     *    confirman juntas o se revierten juntas (no quedan estados parciales
+     *    si algo falla a mitad).
+     */
+    return this.dataSource.transaction("SERIALIZABLE", async (manager) => {
+      const invitationRepo = manager.getRepository(AdminInvitation);
+      const accountRepo = manager.getRepository(AdminAccount);
+      const assignmentRepo = manager.getRepository(AdminChurchAssignment);
+
+      const invitation = await invitationRepo.findOne({
+        where: { tokenHash },
+        lock: { mode: "pessimistic_write" },
       });
-      if (!creator || creator.role !== AdminRole.ROOT || !creator.isActive) {
-        invitation.status = AdminInvitationStatus.REVOKED;
-        await this.invitationRepo.save(invitation);
-        throw new ForbiddenException(
-          "La invitación quedó inválida: quien la creó ya no es ROOT activo. Solicita una nueva invitación a otra cuenta ROOT.",
+      if (!invitation) {
+        throw new NotFoundException("Invitación inválida");
+      }
+      if (invitation.status !== AdminInvitationStatus.PENDING) {
+        throw new BadRequestException("La invitación ya no está disponible");
+      }
+      if (invitation.expiresAt < new Date()) {
+        invitation.status = AdminInvitationStatus.EXPIRED;
+        await invitationRepo.save(invitation);
+        throw new BadRequestException("La invitación ha expirado");
+      }
+
+      const existing = await accountRepo.findOne({
+        where: { username: invitation.username },
+      });
+      if (existing) {
+        throw new ConflictException("El nombre de usuario ya está en uso");
+      }
+
+      // Si la invitación es para ROOT, comprobamos UNA VEZ MÁS que el actor
+      // que la creó sigue siendo ROOT activo en este instante. Esto cierra
+      // una posible ventana donde se invita a una nueva ROOT, se desactiva
+      // o degrada al creador, y aún se intenta aceptar.
+      if (invitation.targetRole === AdminRole.ROOT) {
+        const creator = await accountRepo.findOne({
+          where: { id: invitation.createdByAdminAccountId },
+        });
+        if (!creator || creator.role !== AdminRole.ROOT || !creator.isActive) {
+          invitation.status = AdminInvitationStatus.REVOKED;
+          await invitationRepo.save(invitation);
+          throw new ForbiddenException(
+            "La invitación quedó inválida: quien la creó ya no es ROOT activo. Solicita una nueva invitación a otra cuenta ROOT.",
+          );
+        }
+      }
+
+      const account = accountRepo.create({
+        username: invitation.username,
+        displayName: invitation.displayName,
+        passwordHash,
+        role: invitation.targetRole,
+        isActive: true,
+        tokenVersion: 1,
+        // ROOT no se ata a una iglesia. ADMIN sí.
+        assignedChurchId:
+          invitation.targetRole === AdminRole.ROOT
+            ? null
+            : invitation.assignedChurchId,
+        // Permisos globales: para ROOT quedan vacíos porque tiene todos por
+        // construcción (la lógica de permisos en PermissionsService ya lo
+        // resuelve via isRoot()). Para ADMIN aplicamos los pre-asignados.
+        globalPermissions:
+          invitation.targetRole === AdminRole.ROOT
+            ? []
+            : invitation.globalPermissions ?? [],
+      });
+      const saved = await accountRepo.save(account);
+
+      // Para ADMIN creamos la asignación admin↔iglesia con los permisos del
+      // template. Para ROOT no creamos asignación: el resolver de permisos
+      // ya devuelve "puede todo" para ROOT en cualquier iglesia.
+      if (
+        invitation.targetRole === AdminRole.ADMIN &&
+        invitation.assignedChurchId
+      ) {
+        await assignmentRepo.save(
+          assignmentRepo.create({
+            adminAccountId: saved.id,
+            churchId: invitation.assignedChurchId,
+            permissions:
+              invitation.churchPermissions &&
+              invitation.churchPermissions.length > 0
+                ? invitation.churchPermissions
+                : [...ALL_CHURCH_PERMISSIONS],
+          }),
         );
       }
-    }
 
-    const account = this.accountRepo.create({
-      username: invitation.username,
-      displayName: invitation.displayName,
-      passwordHash,
-      role: invitation.targetRole,
-      isActive: true,
-      tokenVersion: 1,
-      // ROOT no se ata a una iglesia. ADMIN sí.
-      assignedChurchId:
-        invitation.targetRole === AdminRole.ROOT
-          ? null
-          : invitation.assignedChurchId,
-      // Permisos globales: para ROOT quedan vacíos porque tiene todos por
-      // construcción (la lógica de permisos en PermissionsService ya lo
-      // resuelve via isRoot()). Para ADMIN aplicamos los pre-asignados.
-      globalPermissions:
-        invitation.targetRole === AdminRole.ROOT
-          ? []
-          : invitation.globalPermissions ?? [],
+      invitation.status = AdminInvitationStatus.ACCEPTED;
+      invitation.acceptedAt = new Date();
+      invitation.acceptedByAdminAccountId = saved.id;
+      await invitationRepo.save(invitation);
+
+      return saved;
     });
-    const saved = await this.accountRepo.save(account);
-
-    // Para ADMIN creamos la asignación admin↔iglesia con los permisos del
-    // template. Para ROOT no creamos asignación: el resolver de permisos
-    // ya devuelve "puede todo" para ROOT en cualquier iglesia.
-    if (
-      invitation.targetRole === AdminRole.ADMIN &&
-      invitation.assignedChurchId
-    ) {
-      await this.assignmentRepo.save(
-        this.assignmentRepo.create({
-          adminAccountId: saved.id,
-          churchId: invitation.assignedChurchId,
-          permissions:
-            invitation.churchPermissions &&
-            invitation.churchPermissions.length > 0
-              ? invitation.churchPermissions
-              : [...ALL_CHURCH_PERMISSIONS],
-        }),
-      );
-    }
-
-    invitation.status = AdminInvitationStatus.ACCEPTED;
-    invitation.acceptedAt = new Date();
-    invitation.acceptedByAdminAccountId = saved.id;
-    await this.invitationRepo.save(invitation);
-
-    return saved;
   }
 }
