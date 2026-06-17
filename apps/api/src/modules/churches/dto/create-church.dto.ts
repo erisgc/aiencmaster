@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -43,6 +44,7 @@ export class CreateChurchDto {
 
   @IsOptional()
   @IsString()
+  @IsUrl({ protocols: ["http", "https"], require_protocol: true })
   @MaxLength(2048)
   mapsUrl?: string | null;
 

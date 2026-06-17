@@ -14,7 +14,10 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    // trustProxy: 1 => confiamos en exactamente 1 proxy reverso (Railway).
+    // Así req.ip es la IP real del cliente y NO el header X-Forwarded-For
+    // crudo (que un cliente podría falsear para eludir el rate limiting).
+    new FastifyAdapter({ trustProxy: 1 }),
   );
 
   // Security headers (CSP deshabilitado porque la API solo devuelve JSON).

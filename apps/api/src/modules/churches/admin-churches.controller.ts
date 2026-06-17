@@ -20,6 +20,13 @@ import type {
 } from "../admin-security/admin-security.types";
 import { AdminAuthGuard } from "../admin-security/guards/admin-auth.guard";
 import { AdminOriginGuard } from "../admin-security/guards/admin-origin.guard";
+import { GlobalPermissionsGuard } from "../admin-security/permissions/global-permissions.guard";
+import { RequireGlobalPermission } from "../admin-security/permissions/require-permission.decorator";
+import {
+  ChurchPermission,
+  GlobalPermission,
+} from "../admin-security/permissions/permission.enums";
+import { PermissionsService } from "../admin-security/permissions/permissions.service";
 import { ChurchesService } from "./churches.service";
 import { CreateChurchDto } from "./dto/create-church.dto";
 import { UpdateChurchDto } from "./dto/update-church.dto";
@@ -71,11 +78,12 @@ function normalizeOptionalText(
 }
 
 @Controller("admin/churches")
-@UseGuards(AdminOriginGuard, AdminAuthGuard)
+@UseGuards(AdminOriginGuard, AdminAuthGuard, GlobalPermissionsGuard)
 export class AdminChurchesController {
   constructor(
     private readonly service: ChurchesService,
     private readonly auditService: AdminAuditService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   @Get()
@@ -89,6 +97,7 @@ export class AdminChurchesController {
   }
 
   @Post()
+  @RequireGlobalPermission(GlobalPermission.MANAGE_CHURCHES)
   async create(
     @Req() req: AdminRequest,
     @AdminAuth() actor: AuthenticatedAdminContext,
@@ -164,6 +173,22 @@ export class AdminChurchesController {
     @Req() req: AdminRequest,
     @AdminAuth() actor: AuthenticatedAdminContext,
   ) {
+    // Autorización: o eres gestor global de iglesias, o tienes el permiso
+    // por-iglesia EDIT_CHURCH_INFO sobre ESTA iglesia. Sin esto, cualquier
+    // admin autenticado podía editar cualquier iglesia (IDOR).
+    if (
+      !this.permissions.hasGlobalPermission(
+        actor.account,
+        GlobalPermission.MANAGE_CHURCHES,
+      )
+    ) {
+      await this.permissions.assertChurchPermission(
+        actor.account,
+        id,
+        ChurchPermission.EDIT_CHURCH_INFO,
+      );
+    }
+
     const rawFields: Record<string, string> = {};
     const files: {
       mainImage?: IncomingFile;
@@ -244,6 +269,7 @@ export class AdminChurchesController {
   }
 
   @Patch(":id/toggle")
+  @RequireGlobalPermission(GlobalPermission.MANAGE_CHURCHES)
   async toggleActive(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Req() req: AdminRequest,
@@ -270,6 +296,7 @@ export class AdminChurchesController {
   }
 
   @Delete(":id")
+  @RequireGlobalPermission(GlobalPermission.MANAGE_CHURCHES)
   async remove(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Req() req: AdminRequest,

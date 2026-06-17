@@ -20,6 +20,9 @@ import type {
 } from "../admin-security/admin-security.types";
 import { AdminAuthGuard } from "../admin-security/guards/admin-auth.guard";
 import { AdminOriginGuard } from "../admin-security/guards/admin-origin.guard";
+import { GlobalPermissionsGuard } from "../admin-security/permissions/global-permissions.guard";
+import { RequireGlobalPermission } from "../admin-security/permissions/require-permission.decorator";
+import { GlobalPermission } from "../admin-security/permissions/permission.enums";
 import { AnnouncementsService } from "./announcements.service";
 import { CreateAnnouncementDto } from "./dto/create-announcement.dto";
 import { UpdateAnnouncementDto } from "./dto/update-announcement.dto";
@@ -31,7 +34,7 @@ type IncomingFile = {
 };
 
 @Controller("admin/announcements")
-@UseGuards(AdminOriginGuard, AdminAuthGuard)
+@UseGuards(AdminOriginGuard, AdminAuthGuard, GlobalPermissionsGuard)
 export class AdminAnnouncementsController {
   constructor(
     private readonly service: AnnouncementsService,
@@ -39,6 +42,7 @@ export class AdminAnnouncementsController {
   ) {}
 
   @Post()
+  @RequireGlobalPermission(GlobalPermission.MANAGE_GLOBAL_ANNOUNCEMENTS)
   async create(
     @Req() req: AdminRequest,
     @AdminAuth() actor: AuthenticatedAdminContext,
@@ -89,6 +93,7 @@ export class AdminAnnouncementsController {
   }
 
   @Put(":id")
+  @RequireGlobalPermission(GlobalPermission.MANAGE_GLOBAL_ANNOUNCEMENTS)
   async update(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Body() dto: UpdateAnnouncementDto,
@@ -115,6 +120,7 @@ export class AdminAnnouncementsController {
   }
 
   @Delete(":id")
+  @RequireGlobalPermission(GlobalPermission.MANAGE_GLOBAL_ANNOUNCEMENTS)
   async remove(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Req() req: AdminRequest,

@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import type { FastifyReply } from "fastify";
 import { DataSource, Repository } from "typeorm";
+import { timingSafeEqual } from "node:crypto";
 
 import { AdminAccount } from "./admin-account.entity";
 import { AdminAccessRequest } from "./admin-access-request.entity";
@@ -52,13 +53,25 @@ export class AdminAuthService {
     return username.trim().toLowerCase();
   }
 
+  /**
+   * IP del cliente para rate limiting. Usa req.ip, que Fastify calcula de
+   * forma confiable a partir de X-Forwarded-For SOLO cuando trustProxy está
+   * configurado (ver main.ts). Parsear el header a mano permitiría a un
+   * cliente falsear su IP y eludir el rate limiting.
+   */
   private getRateLimitIp(req: AdminRequest) {
-    const forwarded = req.headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.length > 0) {
-      return forwarded.split(",")[0]?.trim() ?? req.ip ?? null;
-    }
-
     return req.ip ?? null;
+  }
+
+  /**
+   * Comparación de secretos en tiempo constante para evitar timing attacks
+   * al validar el secreto de bootstrap / recovery.
+   */
+  private secretsMatch(provided: string, configured: string): boolean {
+    const a = Buffer.from(provided, "utf8");
+    const b = Buffer.from(configured, "utf8");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   }
 
   private getLoginRateLimitPolicy(req: AdminRequest, username: string) {
@@ -234,7 +247,7 @@ export class AdminAuthService {
       throw new ForbiddenException("Bootstrap secret is not configured");
     }
 
-    if (dto.secret !== configuredSecret) {
+    if (!this.secretsMatch(dto.secret, configuredSecret)) {
       await this.logBootstrapFailure("Bootstrap secret is invalid", req, {
         username,
       });
@@ -367,7 +380,7 @@ export class AdminAuthService {
       throw new ForbiddenException("Root recovery secret is not configured");
     }
 
-    if (dto.secret !== configuredSecret) {
+    if (!this.secretsMatch(dto.secret, configuredSecret)) {
       await this.logRootRecoveryFailure(
         "Root recovery secret is invalid",
         req,
@@ -646,7 +659,10 @@ export class AdminAuthService {
      * de entorno y borrar los devices APPROVED creados durante el modo
      * relajado.
      */
-    if (process.env.ADMIN_DEVICE_VERIFICATION_DISABLED === "true") {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.ADMIN_DEVICE_VERIFICATION_DISABLED === "true"
+    ) {
       const device = await this.upsertDeviceAsApproved(
         existingDevice,
         account,
