@@ -181,6 +181,14 @@ export class AnnouncementsService {
     });
   }
 
+  /** Listado para el panel admin (incluye adjuntos). */
+  findAllForAdmin() {
+    return this.repo.find({
+      order: { createdAt: "DESC" },
+      relations: ["attachments"],
+    });
+  }
+
   findPaginatedWithFilters(
     limit: number,
     offset: number,

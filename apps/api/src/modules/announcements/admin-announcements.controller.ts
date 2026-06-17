@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   ParseUUIDPipe,
   Post,
@@ -40,6 +41,13 @@ export class AdminAnnouncementsController {
     private readonly service: AnnouncementsService,
     private readonly auditService: AdminAuditService,
   ) {}
+
+  // Listado para el panel/app admin. Cualquier admin autenticado puede ver
+  // los anuncios globales (sólo crear/editar/eliminar exige permiso).
+  @Get()
+  findAll() {
+    return this.service.findAllForAdmin();
+  }
 
   @Post()
   @RequireGlobalPermission(GlobalPermission.MANAGE_GLOBAL_ANNOUNCEMENTS)
