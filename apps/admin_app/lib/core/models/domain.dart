@@ -845,3 +845,39 @@ class AccountHistoryResponse {
             .toList(),
       );
 }
+
+/// Entrada del registro de auditoría GLOBAL (todas las acciones del sistema,
+/// con el actor que las realizó). Para el historial general de la app.
+class AuditLogEntry {
+  final String id;
+  final String actionType;
+  final String description;
+  final DateTime createdAt;
+  final String? actorName;
+  final String? actorUsername;
+  final String? actorRole;
+
+  AuditLogEntry({
+    required this.id,
+    required this.actionType,
+    required this.description,
+    required this.createdAt,
+    this.actorName,
+    this.actorUsername,
+    this.actorRole,
+  });
+
+  factory AuditLogEntry.fromJson(Map<String, dynamic> j) {
+    final actor = (j['actorAdminAccount'] as Map?)?.cast<String, dynamic>();
+    return AuditLogEntry(
+      id: j['id'] as String? ?? '',
+      actionType: j['actionType'] as String? ?? '',
+      description: j['description'] as String? ?? '',
+      createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      actorName: actor?['displayName'] as String?,
+      actorUsername: actor?['username'] as String?,
+      actorRole: actor?['role'] as String?,
+    );
+  }
+}

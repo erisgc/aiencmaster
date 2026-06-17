@@ -31,13 +31,19 @@ class AdminApp extends StatefulWidget {
   State<AdminApp> createState() => _AdminAppState();
 }
 
-class _AdminAppState extends State<AdminApp> {
+class _AdminAppState extends State<AdminApp> with WidgetsBindingObserver {
   late final GoRouter _router;
   late final AppLinks _appLinks;
+
+  /// Momento en que la app pasó a segundo plano. Se usa para exigir
+  /// re-autenticación local si vuelve tras más de [_inactivityThreshold].
+  DateTime? _pausedAt;
+  static const Duration _inactivityThreshold = Duration(minutes: 2);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _router = buildRouter();
     _appLinks = AppLinks();
 
@@ -47,6 +53,28 @@ class _AdminAppState extends State<AdminApp> {
     });
     // Deep link entrante mientras la app está corriendo.
     _appLinks.uriLinkStream.listen(_handleDeepLink);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _pausedAt = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      final pausedAt = _pausedAt;
+      _pausedAt = null;
+      if (pausedAt != null &&
+          DateTime.now().difference(pausedAt) >= _inactivityThreshold) {
+        // Volvió tras >2 min fuera: exigir re-autenticación local.
+        Locator.authState.lockForInactivity();
+      }
+    }
   }
 
   void _handleDeepLink(Uri uri) {

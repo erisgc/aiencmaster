@@ -290,6 +290,18 @@ class SecurityService {
     return AccountHistoryResponse.fromJson(res.data as Map<String, dynamic>);
   }
 
+  /// Registro de auditoría GLOBAL (todas las acciones del sistema).
+  Future<List<AuditLogEntry>> auditLogs() async {
+    final res = await _api.dio.get('/admin/security/audit-logs');
+    final raw = res.data;
+    if (raw is List) {
+      return raw
+          .map((e) => AuditLogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return const [];
+  }
+
   /// Actualiza los permisos globales de una cuenta no-ROOT.
   Future<void> updateGlobalPermissions(
     String accountId,

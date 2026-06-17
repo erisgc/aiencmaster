@@ -142,6 +142,56 @@ class _SecurityScreenState extends State<SecurityScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          GemCard(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const _GlobalAuditScreen(),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        GemPalette.amethyst,
+                                        GemPalette.sapphire,
+                                      ],
+                                    ),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.fact_check_outlined,
+                                      color: Colors.white),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Historial de auditoría',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const Text(
+                                        'Registro de todas las acciones del sistema, con su autor y fecha',
+                                        style: TextStyle(
+                                            color: GemPalette.textMuted,
+                                            fontSize: 12.5,
+                                            height: 1.35),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right,
+                                    color: GemPalette.textMuted),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 14),
                           Padding(
                             padding: const EdgeInsets.only(left: 4),
@@ -361,6 +411,147 @@ class _AccountHistoryScreenState extends State<_AccountHistoryScreen> {
                     );
                   },
                 ),
+    );
+  }
+}
+
+/// Historial de auditoría GLOBAL: todas las acciones del sistema, agrupadas
+/// por día y con el autor de cada acción.
+class _GlobalAuditScreen extends StatefulWidget {
+  const _GlobalAuditScreen();
+
+  @override
+  State<_GlobalAuditScreen> createState() => _GlobalAuditScreenState();
+}
+
+class _GlobalAuditScreenState extends State<_GlobalAuditScreen> {
+  List<AuditLogEntry> _items = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final list = await Locator.security.auditLogs();
+      if (mounted) setState(() => _items = list);
+    } catch (e) {
+      if (mounted) setState(() => _error = userMessageFor(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Agrupa por día (más reciente primero), preservando el orden interno.
+  Map<String, List<AuditLogEntry>> _grouped() {
+    final fmt = DateFormat("EEEE d 'de' MMMM yyyy", 'es');
+    final map = <String, List<AuditLogEntry>>{};
+    for (final e in _items) {
+      final key = fmt.format(e.createdAt.toLocal());
+      (map[key] ??= []).add(e);
+    }
+    return map;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Historial de auditoría')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GemErrorBanner(message: _error!),
+                )
+              : _items.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Aún no hay acciones registradas.',
+                          style: TextStyle(color: GemPalette.textMuted),
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        children: [
+                          for (final entry in _grouped().entries) ...[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                              child: Text(
+                                entry.key,
+                                style: const TextStyle(
+                                  color: GemPalette.textMuted,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                            for (final a in entry.value) ...[
+                              GemCard(
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      actionTypeLabel(a.actionType),
+                                      style: const TextStyle(
+                                        color: GemPalette.emerald,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(a.description),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person_outline,
+                                            size: 13,
+                                            color: GemPalette.textMuted),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            a.actorName ?? 'Sistema',
+                                            style: const TextStyle(
+                                                color: GemPalette.textMuted,
+                                                fontSize: 11.5),
+                                          ),
+                                        ),
+                                        Text(
+                                          DateFormat('HH:mm', 'es')
+                                              .format(a.createdAt.toLocal()),
+                                          style: const TextStyle(
+                                              color: GemPalette.textMuted,
+                                              fontSize: 11.5),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ],
+                        ],
+                      ),
+                    ),
     );
   }
 }

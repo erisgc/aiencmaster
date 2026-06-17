@@ -102,6 +102,23 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bloqueo por inactividad: la app estuvo en segundo plano más del umbral
+  /// (2 min) y al volver se exige re-autenticación LOCAL (no re-invitación).
+  ///   - Con PIN o biometría configurados → pantalla de bloqueo.
+  ///   - Sin ninguno → cierra sesión y obliga a re-loguear con credenciales.
+  /// Sólo aplica si estábamos autenticados (no molesta en login/lock/loading).
+  Future<void> lockForInactivity() async {
+    if (_account == null || _phase != AuthPhase.authenticated) return;
+    final pinSet = await _localAuth.hasPin();
+    final bioEnabled = await _localAuth.isBiometricEnabled();
+    if (pinSet || bioEnabled) {
+      _phase = AuthPhase.locked;
+      notifyListeners();
+    } else {
+      await signOut();
+    }
+  }
+
   Future<void> signOut() async {
     await _auth.logout();
     await _localAuth.clearAll();
