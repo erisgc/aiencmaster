@@ -15,6 +15,10 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+  # Hash del PIN local (SHA-256 salado e iterado). Puro Dart, sin deps
+  # nativas (no arrastra el problema de win32/path con espacios).
+  crypto: ^3.0.6
+
   # HTTP + cookies persistentes (necesario para hablar con el backend
   # que entrega cookies HttpOnly admin_session y admin_device).
   dio: ^5.7.0

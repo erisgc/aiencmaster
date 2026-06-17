@@ -51,9 +51,23 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _submitPin() async {
+    if (await Locator.localAuth.isLocked()) {
+      final secs = await Locator.localAuth.secondsUntilUnlock();
+      if (mounted) {
+        setState(() => _error =
+            'Demasiados intentos. Espera $secs s antes de reintentar.');
+      }
+      return;
+    }
+
     final ok = await Locator.localAuth.verifyPin(_pinCtrl.text);
     if (!ok) {
-      setState(() => _error = 'PIN incorrecto');
+      final secs = await Locator.localAuth.secondsUntilUnlock();
+      if (mounted) {
+        setState(() => _error = secs > 0
+            ? 'Demasiados intentos. Espera $secs s antes de reintentar.'
+            : 'PIN incorrecto');
+      }
       _pinCtrl.clear();
       return;
     }

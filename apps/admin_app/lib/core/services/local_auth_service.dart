@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Manejo de re-login local con PIN.
@@ -7,47 +11,90 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// tiene espacios. Volverá a activarse cuando movamos el SDK o cuando
 /// `local_auth` deje de depender de `objective_c`.
 ///
-/// El cifrado at-rest también está en pausa por el mismo motivo
-/// (`flutter_secure_storage_windows` requiere `win32` 6.x). Para el MVP:
-///   - El PIN se guarda como FNV-1a hash, no en claro.
-///   - Las cookies HttpOnly están en cookie_jar (archivos dentro del
-///     sandbox del app), inaccesibles para otras apps.
-/// Cuando se quiera endurecer, basta con volver a `flutter_secure_storage`
-/// y mover el SDK Flutter a una ruta sin espacios.
+/// Endurecimiento del PIN:
+///   - Se guarda como SHA-256 salado e iterado (no en claro, no FNV débil).
+///   - Throttling local: tras varios fallos se bloquea con espera escalada,
+///     para frenar fuerza bruta sobre el dispositivo.
+///   - Las cookies HttpOnly están en cookie_jar (archivos dentro del sandbox
+///     del app), inaccesibles para otras apps.
 class LocalAuthService {
   LocalAuthService();
 
   static const _kPinHash = 'local_pin_hash';
+  static const _kPinSalt = 'local_pin_salt';
+  static const _kPinFails = 'local_pin_fails';
+  static const _kPinLockUntil = 'local_pin_lock_until';
   static const _kLastUser = 'local_last_user';
+
+  /// Iteraciones del KDF. Suficiente para encarecer la fuerza bruta sin
+  /// retrasar perceptiblemente el desbloqueo legítimo.
+  static const _iterations = 20000;
+
+  /// A partir de este número de fallos consecutivos empieza el bloqueo.
+  static const _failThreshold = 5;
 
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   /// Por ahora siempre `false` — biometría queda como TODO.
   Future<bool> biometricsAvailable() async => false;
-
   Future<bool> isBiometricEnabled() async => false;
-
   Future<void> setBiometricEnabled(bool _) async {
     /* no-op */
   }
-
   Future<bool> authenticate({String? reason}) async => false;
 
   Future<void> setPin(String pin) async {
     final p = await _prefs;
-    await p.setString(_kPinHash, _hashPin(pin));
+    final salt = _generateSalt();
+    await p.setString(_kPinSalt, salt);
+    await p.setString(_kPinHash, _kdf(pin, salt));
+    await p.remove(_kPinFails);
+    await p.remove(_kPinLockUntil);
   }
 
+  /// Verifica el PIN aplicando throttling. Devuelve false si el PIN es
+  /// incorrecto O si el dispositivo está temporalmente bloqueado por
+  /// demasiados intentos.
   Future<bool> verifyPin(String pin) async {
     final p = await _prefs;
+    if (await _isLocked(p)) return false;
+
     final stored = p.getString(_kPinHash);
     if (stored == null) return false;
-    return stored == _hashPin(pin);
+
+    final salt = p.getString(_kPinSalt);
+    final matches = salt == null
+        // Migración: PIN antiguo guardado con FNV-1a sin sal.
+        ? stored == _legacyHash(pin)
+        : _constantTimeEquals(stored, _kdf(pin, salt));
+
+    if (matches) {
+      // Éxito: si venía del formato viejo, re-hashea con sal.
+      if (salt == null) await setPin(pin);
+      await p.remove(_kPinFails);
+      await p.remove(_kPinLockUntil);
+      return true;
+    }
+
+    await _registerFailure(p);
+    return false;
   }
 
   Future<bool> hasPin() async {
     final p = await _prefs;
     return p.getString(_kPinHash) != null;
+  }
+
+  /// True si el desbloqueo está bloqueado temporalmente por intentos fallidos.
+  Future<bool> isLocked() async => _isLocked(await _prefs);
+
+  /// Segundos restantes de bloqueo (0 si no está bloqueado).
+  Future<int> secondsUntilUnlock() async {
+    final p = await _prefs;
+    final until = p.getInt(_kPinLockUntil) ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (until <= now) return 0;
+    return ((until - now) / 1000).ceil();
   }
 
   Future<void> setLastUser(String username) async {
@@ -63,15 +110,64 @@ class LocalAuthService {
   Future<void> clearAll() async {
     final p = await _prefs;
     await p.remove(_kPinHash);
+    await p.remove(_kPinSalt);
+    await p.remove(_kPinFails);
+    await p.remove(_kPinLockUntil);
     await p.remove(_kLastUser);
   }
 
-  String _hashPin(String pin) {
+  /* ── internos ── */
+
+  Future<bool> _isLocked(SharedPreferences p) async {
+    final until = p.getInt(_kPinLockUntil) ?? 0;
+    return DateTime.now().millisecondsSinceEpoch < until;
+  }
+
+  Future<void> _registerFailure(SharedPreferences p) async {
+    final fails = (p.getInt(_kPinFails) ?? 0) + 1;
+    await p.setInt(_kPinFails, fails);
+
+    if (fails >= _failThreshold) {
+      // Espera escalada: 30s, 60s, 120s... con tope de 5 minutos.
+      final over = fails - _failThreshold;
+      final seconds = (30 * (1 << over)).clamp(30, 300);
+      final until =
+          DateTime.now().millisecondsSinceEpoch + seconds * 1000;
+      await p.setInt(_kPinLockUntil, until);
+    }
+  }
+
+  String _generateSalt() {
+    final r = Random.secure();
+    final bytes = List<int>.generate(16, (_) => r.nextInt(256));
+    return base64Url.encode(bytes);
+  }
+
+  /// SHA-256 salado e iterado. Encadena hashes (sal + pin) _iterations veces.
+  String _kdf(String pin, String salt) {
+    List<int> data = utf8.encode('$salt:$pin');
+    for (var i = 0; i < _iterations; i++) {
+      data = sha256.convert(data).bytes;
+    }
+    return base64Url.encode(data);
+  }
+
+  /// Hash legacy (FNV-1a) sólo para migrar PINs guardados con el formato viejo.
+  String _legacyHash(String pin) {
     var h = 0x811c9dc5;
     for (final c in pin.codeUnits) {
       h ^= c;
       h = (h * 0x01000193) & 0xFFFFFFFF;
     }
     return h.toRadixString(16).padLeft(8, '0');
+  }
+
+  bool _constantTimeEquals(String a, String b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
   }
 }

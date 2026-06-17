@@ -132,11 +132,10 @@ async function proxy(
       cache: "no-store",
     });
   } catch (err) {
+    // No exponer el detalle interno (host/stack) al cliente; sólo loguearlo.
+    console.error("[api-proxy] upstream error:", err);
     return NextResponse.json(
-      {
-        message: "Upstream unreachable",
-        error: err instanceof Error ? err.message : String(err),
-      },
+      { message: "No se pudo contactar el servidor. Intenta de nuevo." },
       { status: 502 },
     );
   }
