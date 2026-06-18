@@ -22,20 +22,23 @@ function buildTypeOrmOptions(): TypeOrmModuleOptions {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   const wantsSync = process.env.DB_SYNCHRONIZE === "true";
 
-  if (isProd && wantsSync) {
-    // Aviso explícito: en producción se debería usar migraciones.
-    // Permitimos `synchronize` solo para la primera deploy; después
-    // se debe poner DB_SYNCHRONIZE=false.
+  // Fail-safe: en producción NUNCA sincronizamos el esquema automáticamente.
+  // TypeORM `synchronize` puede alterar o eliminar columnas y provocar
+  // pérdida de datos. Si alguien deja DB_SYNCHRONIZE=true en prod, lo
+  // ignoramos (no es un interruptor seguro) y los cambios de esquema deben
+  // hacerse con migraciones.
+  const synchronize = isProd ? false : wantsSync;
 
+  if (isProd && wantsSync) {
     console.warn(
-      "[TypeORM] DB_SYNCHRONIZE=true en producción. Desactívalo después de crear el esquema inicial.",
+      "[TypeORM] DB_SYNCHRONIZE=true fue IGNORADO en producción. Usa migraciones para cambios de esquema.",
     );
   }
 
   const base: Partial<TypeOrmModuleOptions> = {
     type: "postgres",
     autoLoadEntities: true,
-    synchronize: wantsSync,
+    synchronize,
   };
 
   if (databaseUrl) {

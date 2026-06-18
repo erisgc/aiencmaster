@@ -210,11 +210,11 @@ export class AdminSessionService {
   }
 
   getRequestIp(req: AdminRequest) {
-    const forwarded = req.headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.length > 0) {
-      return forwarded.split(",")[0]?.trim() ?? req.ip ?? null;
-    }
-
+    // Usamos req.ip, que Fastify resuelve de forma confiable desde la cadena
+    // X-Forwarded-For SOLO con trustProxy configurado (ver main.ts). Parsear
+    // el header a mano permitía a un cliente falsear su IP y envenenar el
+    // rastro de auditoría / la huella de dispositivo (mismo criterio que el
+    // rate limiting, admin-auth.service getRateLimitIp).
     return req.ip ?? null;
   }
 

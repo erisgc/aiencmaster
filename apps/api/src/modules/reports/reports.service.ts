@@ -14,7 +14,6 @@ import {
 } from "typeorm";
 
 import { AdminAccount } from "../admin-security/admin-account.entity";
-import { AdminRole } from "../admin-security/enums/admin-role.enum";
 import {
   ChurchPermission,
   GlobalPermission,
@@ -78,16 +77,6 @@ export class ReportsService {
     }
     const assigned = await this.permissions.getAssignedChurchIds(actor);
     return assigned.includes(churchId);
-  }
-
-  /** @deprecated usar assertSubmitScope / canView. Se mantiene para llamadas internas legacy. */
-  private assertScope(actor: AdminAccount, churchId: string) {
-    if (actor.role === AdminRole.ROOT) return;
-    if (actor.assignedChurchId !== churchId) {
-      throw new ForbiddenException(
-        "No tienes permiso para operar sobre esta iglesia.",
-      );
-    }
   }
 
   private validateData(reportType: ReportType, data: Record<string, unknown>) {

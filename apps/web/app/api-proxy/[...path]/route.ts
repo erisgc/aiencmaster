@@ -37,7 +37,51 @@ const HOP_BY_HOP_HEADERS = new Set([
   "host",
   "content-length",
   "accept-encoding",
+  // Cabeceras de IP controlables por el cliente: no las reenviamos para que
+  // no envenenen el req.ip del backend (la plataforma añade la cadena real).
+  "x-forwarded-for",
+  "x-real-ip",
+  "forwarded",
 ]);
+
+// Métodos que no modifican estado: no requieren chequeo anti-CSRF.
+const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Anti-CSRF en el borde del proxy.
+ *
+ * El proxy reescribe Origin/Referer hacia WEB_ORIGIN para que el backend
+ * (AdminOriginGuard) acepte la petición. Eso convierte al proxy en un
+ * "confused deputy": si no validamos el origen REAL del navegador aquí,
+ * una página maliciosa podría disparar mutaciones con las cookies
+ * first-party de la víctima (las cookies van SameSite=None en producción).
+ *
+ * Por eso, para métodos que modifican estado exigimos que el Origin (o, en
+ * su defecto, el Referer) del request entrante coincida con el propio
+ * dominio del proxy. Si no coincide, se rechaza ANTES de reenviar.
+ */
+function isSameOriginMutation(req: NextRequest, selfOrigin: string): boolean {
+  if (CSRF_SAFE_METHODS.has(req.method.toUpperCase())) return true;
+
+  const origin = req.headers.get("origin");
+  if (origin !== null && origin.length > 0) {
+    return origin === selfOrigin;
+  }
+
+  // Sin Origin (algunos navegadores lo omiten en same-origin): caemos al
+  // Referer, exigiendo que su origin coincida. Sin ninguno de los dos,
+  // rechazamos (fail-closed).
+  const referer = req.headers.get("referer");
+  if (referer !== null && referer.length > 0) {
+    try {
+      return new URL(referer).origin === selfOrigin;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
 
 interface ParsedCookie {
   name: string;
@@ -100,6 +144,17 @@ async function proxy(
 ): Promise<Response> {
   const { path } = await ctx.params;
   const incomingUrl = new URL(req.url);
+  const selfOrigin = `${incomingUrl.protocol}//${incomingUrl.host}`;
+
+  // Anti-CSRF: rechazar mutaciones cross-site ANTES de reescribir el Origin
+  // hacia el backend. Sin esto, el proxy anularía el AdminOriginGuard.
+  if (!isSameOriginMutation(req, selfOrigin)) {
+    return NextResponse.json(
+      { message: "Origen de la solicitud no permitido." },
+      { status: 403 },
+    );
+  }
+
   const target = `${getBackendUrl()}/${path.join("/")}${incomingUrl.search}`;
 
   const outgoingHeaders = new Headers();

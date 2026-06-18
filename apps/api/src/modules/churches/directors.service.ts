@@ -8,6 +8,8 @@ import { Repository } from "typeorm";
 
 import { AdminAccount } from "../admin-security/admin-account.entity";
 import { AdminRole } from "../admin-security/enums/admin-role.enum";
+import { ChurchPermission } from "../admin-security/permissions/permission.enums";
+import { PermissionsService } from "../admin-security/permissions/permissions.service";
 import { CloudinaryService } from "../cloudinary/cloudinary.service";
 import {
   ValidatableFile,
@@ -30,17 +32,25 @@ export class DirectorsService {
     @InjectRepository(AdminAccount)
     private readonly accountRepo: Repository<AdminAccount>,
     private readonly cloudinary: CloudinaryService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   /* ── Helpers ── */
 
-  private assertScope(actor: AdminAccount, churchId: string) {
-    if (actor.role === AdminRole.ROOT) return;
-    if (actor.assignedChurchId !== churchId) {
-      throw new ForbiddenException(
-        "No tienes permiso para gestionar esta iglesia.",
-      );
-    }
+  /**
+   * Autoriza la gestión de directores de una iglesia. Exige el permiso
+   * canónico MANAGE_DIRECTORS sobre ESA iglesia (ROOT pasa siempre); resuelto
+   * contra AdminChurchAssignment, no contra el campo legacy assignedChurchId.
+   * Así un admin con otro permiso (p.ej. tesorero con sólo SUBMIT_REPORTS) no
+   * puede crear/editar/borrar directores, y nadie puede tocar una iglesia
+   * sobre la que no tiene asignación.
+   */
+  private async assertScope(actor: AdminAccount, churchId: string) {
+    await this.permissions.assertChurchPermission(
+      actor,
+      churchId,
+      ChurchPermission.MANAGE_DIRECTORS,
+    );
   }
 
   /* ── Public ── */
@@ -67,7 +77,7 @@ export class DirectorsService {
   /* ── Admin ── */
 
   async findAdminByChurch(churchId: string, actor: AdminAccount) {
-    this.assertScope(actor, churchId);
+    await this.assertScope(actor, churchId);
     const directors = await this.directorRepo.find({
       where: { churchId },
       relations: { linkedAdminAccount: true },
@@ -93,7 +103,7 @@ export class DirectorsService {
     photo: ValidatableFile | null,
     actor: AdminAccount,
   ) {
-    this.assertScope(actor, churchId);
+    await this.assertScope(actor, churchId);
 
     const church = await this.churchRepo.findOne({ where: { id: churchId } });
     if (!church) throw new NotFoundException("Iglesia no encontrada");
@@ -103,15 +113,17 @@ export class DirectorsService {
         where: { id: dto.linkedAdminAccountId },
       });
       if (!linked) throw new NotFoundException("Cuenta admin no encontrada");
-      // Sólo se puede vincular una cuenta cuya iglesia asignada sea la misma
-      // (o ROOT, que puede asignar cualquiera).
-      if (
-        actor.role !== AdminRole.ROOT &&
-        linked.assignedChurchId !== churchId
-      ) {
-        throw new ForbiddenException(
-          "Esa cuenta admin no pertenece a esta iglesia",
-        );
+      // Sólo se puede vincular una cuenta que tenga una asignación real a esta
+      // iglesia (o ROOT, que puede vincular cualquiera). Se valida contra
+      // AdminChurchAssignment, no contra el campo legacy assignedChurchId.
+      if (actor.role !== AdminRole.ROOT) {
+        const linkedChurchIds =
+          await this.permissions.getAssignedChurchIds(linked);
+        if (!linkedChurchIds.includes(churchId)) {
+          throw new ForbiddenException(
+            "Esa cuenta admin no pertenece a esta iglesia",
+          );
+        }
       }
     }
 
@@ -147,7 +159,7 @@ export class DirectorsService {
   ) {
     const director = await this.directorRepo.findOne({ where: { id } });
     if (!director) throw new NotFoundException("Director no encontrado");
-    this.assertScope(actor, director.churchId);
+    await this.assertScope(actor, director.churchId);
 
     if (dto.displayName !== undefined)
       director.displayName = dto.displayName.trim();
@@ -177,7 +189,7 @@ export class DirectorsService {
   async remove(id: string, actor: AdminAccount) {
     const director = await this.directorRepo.findOne({ where: { id } });
     if (!director) throw new NotFoundException("Director no encontrado");
-    this.assertScope(actor, director.churchId);
+    await this.assertScope(actor, director.churchId);
 
     if (director.photoPublicId) {
       await this.cloudinary.delete(director.photoPublicId);
